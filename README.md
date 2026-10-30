@@ -27,7 +27,7 @@ python3 -m http.server 8765
 |---|---|---|
 | `data/trades.csv` | 아파트 매매 실거래 57,302건 (2025.01~2026.10 계약, 해제 거래 제외) | 국토교통부 아파트 매매 실거래가(공공데이터포털) |
 | `data/rents.csv` | 아파트 전월세 실거래 98,946건 (2025.01~2026.10 계약) | 국토교통부 아파트 전월세 실거래가(공공데이터포털) |
-| `data/complexes.csv` | 거래 단지 4,140곳 목록과 그중 659곳의 위치 | 단지 이름을 OpenStreetMap(ODbL) 단지 이름과 맞춰 찾음 |
+| `data/complexes.csv` | 거래 단지 4,140곳 목록과 그중 약 660곳의 위치 | 단지 이름을 OpenStreetMap(ODbL) 단지 이름과 맞춰 찾음 |
 | `data/poi.csv` | 도시철도·동해선·KTX 역, 초·중·고등학교 위치 | © OpenStreetMap 기여자, ODbL |
 | `data/gu_shapes.json` | 부산 16개 구·군 경계(단순화) | 통계청 2013년 행정경계, southkorea-maps |
 | `data/price_index.csv` | 부산 아파트 매매가격지수 2026년 3~8월 | 한국부동산원 R-ONE |
