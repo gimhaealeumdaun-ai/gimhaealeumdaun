@@ -67,7 +67,7 @@
   function schedule() {
     if (queued) return;
     queued = true;
-    requestAnimationFrame(runAll);
+    setTimeout(runAll, 0);
   }
 
   window.dash = {

@@ -40,7 +40,7 @@
   [hidden] { display: none !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="assets/dash.js"></script>
+<script src="assets/dash.js?v=2"></script>
 </head>
 <body>
 <div id="dash-root">
@@ -180,7 +180,7 @@
 
   <section class="bp-card" id="result" hidden>
     <div class="bp-cardhead"><h2 data-draw="map-title">—</h2><span class="bp-cardhead"><span data-draw="gmap-top" data-source="complexes"></span><button type="button" class="bp-btn" id="bp-close">닫기 ×</button></span></div>
-    <p class="bp-note">고른 단지의 시세와 입지입니다. Google 지도 팝업이 함께 뜨며, 막혀 있으면 오른쪽 위 버튼을 누르세요. 거리는 직선거리, 도보는 분당 80m 기준입니다.</p>
+    <p class="bp-note">고른 단지의 시세와 입지입니다. PC에서는 Google 지도 팝업이 함께 뜨고(막혀 있으면 오른쪽 위 버튼), 휴대폰에서는 오른쪽 위 링크로 지도를 엽니다. 거리는 직선거리, 도보는 분당 80m 기준입니다.</p>
     <div class="bp-loc bp-aptsum" data-draw="apt-summary" data-source="trades rents"></div>
     <div class="bp-seg bp-tabs" role="tablist" aria-label="입지 항목">
       <button type="button" role="tab" data-loc="school" aria-selected="true">학군</button>
@@ -558,8 +558,9 @@
     return hits[0] || null;
   };
   const gmapUrl = (k) => { const cpx = B.parse('complexes'); const loc = cpx && cpx.get(k); const [gu, dong, apt] = k.split('|'); return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(loc ? loc.lat + ',' + loc.lon : `부산 ${gu} ${dong} ${apt} 아파트`); };
+  B.isMobile = () => window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
   B.gmapUrl = gmapUrl;
-  B.popMap = (k) => { try { const w = window.open(gmapUrl(k), 'bp-gmap', 'popup=yes,width=960,height=720,left=120,top=80'); if (w) w.focus(); } catch (e) { /* 팝업이 막히면 카드의 버튼으로 연다 */ } };
+  B.popMap = (k) => { if (B.isMobile()) return; try { const w = window.open(gmapUrl(k), 'bp-gmap', 'popup=yes,width=960,height=720,left=120,top=80'); if (w) w.focus(); } catch (e) { /* 팝업이 막히면 카드의 버튼으로 연다 */ } };
   B.state.q = '';
   const runSearch = (inp) => {
     const k = findApt(inp.value);
@@ -579,8 +580,19 @@
   });
   // Google 지도 링크는 팝업창으로, 팝업이 막히면 링크대로 새 탭
   document.addEventListener('click', (ev) => {
+    const apt = ev.target.closest('a.bp-apt');
+    if (apt) {
+      ev.preventDefault();
+      B.state.q = ''; dash.draw('search-results');
+      document.querySelectorAll('#bp-q').forEach((i) => { i.value = ''; i.blur(); });
+      B.pick(apt.dataset.key);
+      B.popMap(apt.dataset.key);
+      document.querySelectorAll('#result').forEach((m) => setTimeout(() => m.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80));
+      return;
+    }
     const a = ev.target.closest('a.bp-pop, a.bp-glink, a.bp-gbtn');
     if (a) {
+      if (B.isMobile()) return;
       const w = window.open(a.href, 'bp-gmap', 'popup=yes,width=960,height=720,left=120,top=80');
       if (w) { ev.preventDefault(); try { w.focus(); } catch (e) { /* 무시 */ } }
       return;
@@ -666,12 +678,11 @@
     if (!hits.length) { const d = document.createElement('div'); d.className = 'bp-res'; const s2 = document.createElement('span'); s2.className = 'sm'; s2.textContent = '찾는 단지·학교·역이 없습니다'; d.append(s2); box.replaceChildren(d); return; }
     const rows = hits.map((it) => {
       const row = document.createElement('div'); row.className = 'bp-res'; row.tabIndex = -1;
-      const a = document.createElement('a'); a.className = 'bp-pop'; a.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(it.lat != null ? it.lat + ',' + it.lon : `부산 ${it.sub} ${it.name} 아파트`); a.target = '_blank'; a.rel = 'noopener'; a.title = 'Google 지도 팝업으로 열기';
-      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = it.name + ' ↗';
+      const a = document.createElement('a'); a.className = it.type === 'apt' ? 'bp-apt' : 'bp-pop'; if (it.type === 'apt') a.dataset.key = it.key; a.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(it.lat != null ? it.lat + ',' + it.lon : `부산 ${it.sub} ${it.name} 아파트`); a.target = '_blank'; a.rel = 'noopener'; a.title = it.type === 'apt' ? '시세·입지 보기' : 'Google 지도에서 보기';
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = it.name + (it.type === 'apt' ? ' ›' : ' ↗');
       const tg = document.createElement('span'); tg.className = 'tag'; tg.textContent = it.tag;
       const sm = document.createElement('span'); sm.className = 'sm'; sm.textContent = it.sub;
       a.append(nm, tg, sm); row.append(a);
-      if (it.type === 'apt') { const b = document.createElement('button'); b.type = 'button'; b.dataset.key = it.key; b.textContent = '시세·입지'; row.append(b); }
       const show = () => { rows.forEach((r) => r.classList.toggle('on', r === row)); drawMini(mini, it); };
       row.addEventListener('pointerenter', show); a.addEventListener('focus', show);
       return row;
@@ -697,7 +708,7 @@
     sel.value = p.dong || '';
   });
   dash.draw('map-title', (el) => { const a = B.P().apt; el.textContent = a ? `${a.split('|')[2]} 시세·입지 분석` : '입지 분석'; });
-  dash.draw('gmap-top', (el) => { const a = B.P().apt; if (!a) { el.replaceChildren(); return; } const l = document.createElement('a'); l.className = 'bp-gbtn'; l.href = B.gmapUrl(a); l.target = '_blank'; l.rel = 'noopener'; l.textContent = 'Google 지도 팝업 ↗'; el.replaceChildren(l); });
+  dash.draw('gmap-top', (el) => { const a = B.P().apt; if (!a) { el.replaceChildren(); return; } const l = document.createElement('a'); l.className = 'bp-gbtn'; l.href = B.gmapUrl(a); l.target = '_blank'; l.rel = 'noopener'; l.textContent = B.isMobile() ? 'Google 지도에서 보기 ↗' : 'Google 지도 팝업 ↗'; el.replaceChildren(l); });
   dash.draw('picked-name', (el) => { const a = B.P().apt; el.textContent = a ? a.split('|').slice(1).join(' ') : '—'; });
   dash.draw('asof', (el) => { const e = B.P().end; el.textContent = e ? e.replaceAll('-', '. ') : '—'; });
   dash.draw('month-label', (el) => { const e = B.P().end; el.textContent = e ? `${Number(e.slice(5, 7))}월` : '—'; });
