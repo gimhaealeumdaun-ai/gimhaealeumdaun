@@ -178,9 +178,10 @@
   </header>
 
 
-  <section class="bp-card" id="result" hidden>
-    <div class="bp-cardhead"><h2 data-draw="map-title">—</h2><span class="bp-cardhead"><span data-draw="gmap-top" data-source="complexes"></span><button type="button" class="bp-btn" id="bp-close">닫기 ×</button></span></div>
+  <section class="bp-card" id="result">
+    <div class="bp-cardhead"><h2 data-draw="map-title">—</h2><span class="bp-cardhead"><span data-draw="gmap-top" data-source="complexes"></span><button type="button" class="bp-btn" id="bp-close" hidden>선택 해제 ×</button></span></div>
     <p class="bp-note">고른 단지의 시세와 입지입니다. PC에서는 Google 지도 팝업이 함께 뜨고(막혀 있으면 오른쪽 위 버튼), 휴대폰에서는 오른쪽 위 링크로 지도를 엽니다. 거리는 직선거리, 도보는 분당 80m 기준입니다.</p>
+    <p class="bp-note bp-hint"><strong>위 검색창에 단지 이름을 넣거나 아래 표에서 단지를 누르면 그 단지의 시세와 입지가 여기 나옵니다.</strong> 지금은 구별 입지 비교를 보여줍니다.</p>
     <div class="bp-loc bp-aptsum" data-draw="apt-summary" data-source="trades rents"></div>
     <div class="bp-seg bp-tabs" role="tablist" aria-label="입지 항목">
       <button type="button" role="tab" data-loc="school" aria-selected="true">학군</button>
@@ -541,7 +542,8 @@
     document.querySelectorAll('#bp-start').forEach((i) => { if (i !== document.activeElement) i.value = p.start || ''; });
     document.querySelectorAll('#bp-end').forEach((i) => { if (i !== document.activeElement) i.value = p.end || ''; });
     document.querySelectorAll('#bp-picked').forEach((b) => { b.hidden = !p.apt; });
-    document.querySelectorAll('#result').forEach((r) => { r.hidden = !p.apt; });
+    document.querySelectorAll('#bp-close').forEach((b) => { b.hidden = !p.apt; });
+    document.querySelectorAll('.bp-hint').forEach((h) => { h.hidden = !!p.apt; });
     document.querySelectorAll('.bp-selrow').forEach((r) => { r.hidden = !p.gu; });
   });
   // 단지 검색
@@ -707,7 +709,7 @@
     sel.disabled = !p.gu;
     sel.value = p.dong || '';
   });
-  dash.draw('map-title', (el) => { const a = B.P().apt; el.textContent = a ? `${a.split('|')[2]} 시세·입지 분석` : '입지 분석'; });
+  dash.draw('map-title', (el) => { const a = B.P().apt; el.textContent = a ? `${a.split('|')[2]} 시세·입지 분석` : '시세·입지 분석'; });
   dash.draw('gmap-top', (el) => { const a = B.P().apt; if (!a) { el.replaceChildren(); return; } const l = document.createElement('a'); l.className = 'bp-gbtn'; l.href = B.gmapUrl(a); l.target = '_blank'; l.rel = 'noopener'; l.textContent = B.isMobile() ? 'Google 지도에서 보기 ↗' : 'Google 지도 팝업 ↗'; el.replaceChildren(l); });
   dash.draw('picked-name', (el) => { const a = B.P().apt; el.textContent = a ? a.split('|').slice(1).join(' ') : '—'; });
   dash.draw('asof', (el) => { const e = B.P().end; el.textContent = e ? e.replaceAll('-', '. ') : '—'; });
