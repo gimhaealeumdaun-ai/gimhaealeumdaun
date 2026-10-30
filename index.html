@@ -186,7 +186,7 @@
     </div>
     <div class="bp-card" id="location">
       <div class="bp-cardhead"><h2 data-draw="map-title">—</h2><span data-draw="gmap-top" data-source="complexes"></span></div>
-      <p class="bp-note">학교와 역까지 직선거리이며 도보는 분당 80m 기준입니다. 단지를 고르기 전에는 구별 비교를 보여줍니다. PC에서는 단지를 고르면 Google 지도 팝업이 함께 뜹니다.</p>
+      <p class="bp-note">학교와 역까지 직선거리이며 도보는 분당 80m 기준입니다. 단지를 고르기 전에는 구별 비교를 보여줍니다. 오른쪽 위 링크나 학교·역 이름을 누르면 Google 지도가 새 탭으로 열립니다.</p>
       <div class="bp-seg bp-tabs" role="tablist" aria-label="입지 항목">
         <button type="button" role="tab" data-loc="school" aria-selected="true">학군</button>
         <button type="button" role="tab" data-loc="subway" aria-selected="false">지하철</button>
@@ -567,7 +567,7 @@
   const gmapUrl = (k) => { const cpx = B.parse('complexes'); const loc = cpx && cpx.get(k); const [gu, dong, apt] = k.split('|'); return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(loc ? loc.lat + ',' + loc.lon : `부산 ${gu} ${dong} ${apt} 아파트`); };
   B.isMobile = () => window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
   B.gmapUrl = gmapUrl;
-  B.popMap = (k) => { if (B.isMobile()) return; try { const w = window.open(gmapUrl(k), 'bp-gmap', 'popup=yes,width=960,height=720,left=120,top=80'); if (w) w.focus(); } catch (e) { /* 팝업이 막히면 카드의 버튼으로 연다 */ } };
+  B.popMap = () => {}; // 지도는 링크로만 엽니다
   B.state.q = '';
   const runSearch = (inp) => {
     const k = findApt(inp.value);
@@ -585,7 +585,7 @@
       B.state.q = inp.value; dash.draw('search-results');
     });
   });
-  // Google 지도 링크는 팝업창으로, 팝업이 막히면 링크대로 새 탭
+  // 단지 이름은 시세·입지 카드를 열고, 지도 링크는 새 탭으로 엶
   document.addEventListener('click', (ev) => {
     const apt = ev.target.closest('a.bp-apt');
     if (apt) {
@@ -597,13 +597,7 @@
       document.querySelectorAll('#result').forEach((m) => setTimeout(() => m.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80));
       return;
     }
-    const a = ev.target.closest('a.bp-pop, a.bp-glink, a.bp-gbtn');
-    if (a) {
-      if (B.isMobile()) return;
-      const w = window.open(a.href, 'bp-gmap', 'popup=yes,width=960,height=720,left=120,top=80');
-      if (w) { ev.preventDefault(); try { w.focus(); } catch (e) { /* 무시 */ } }
-      return;
-    }
+    if (ev.target.closest('a.bp-pop, a.bp-glink, a.bp-gbtn')) return; // 지도 링크는 새 탭으로
     if (!ev.target.closest('.bp-search') && B.state.q) { B.state.q = ''; dash.draw('search-results'); }
   });
   document.querySelectorAll('#bp-results').forEach((box) => box.addEventListener('click', (ev) => {
@@ -716,7 +710,7 @@
   });
   dash.draw('price-title', (el) => { const a = B.P().apt; el.textContent = a ? `${a.split('|')[2]} 시세` : '단지 시세'; });
   dash.draw('map-title', (el) => { const a = B.P().apt; el.textContent = a ? `${a.split('|')[2]} 입지` : '입지 분석'; });
-  dash.draw('gmap-top', (el) => { const a = B.P().apt; if (!a) { el.replaceChildren(); return; } const l = document.createElement('a'); l.className = 'bp-gbtn'; l.href = B.gmapUrl(a); l.target = '_blank'; l.rel = 'noopener'; l.textContent = B.isMobile() ? 'Google 지도에서 보기 ↗' : 'Google 지도 팝업 ↗'; el.replaceChildren(l); });
+  dash.draw('gmap-top', (el) => { const a = B.P().apt; if (!a) { el.replaceChildren(); return; } const l = document.createElement('a'); l.className = 'bp-gbtn'; l.href = B.gmapUrl(a); l.target = '_blank'; l.rel = 'noopener'; l.textContent = 'Google 지도에서 보기 ↗'; el.replaceChildren(l); });
   dash.draw('picked-name', (el) => { const a = B.P().apt; el.textContent = a ? a.split('|').slice(1).join(' ') : '—'; });
   dash.draw('asof', (el) => { const e = B.P().end; el.textContent = e ? e.replaceAll('-', '. ') : '—'; });
   dash.draw('month-label', (el) => { const e = B.P().end; el.textContent = e ? `${Number(e.slice(5, 7))}월` : '—'; });
