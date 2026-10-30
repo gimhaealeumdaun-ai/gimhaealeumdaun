@@ -1,0 +1,1258 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>부산 아파트 통계보드</title>
+<meta name="description" content="국토교통부 실거래가로 본 부산 아파트 매매·전세·월세 시세, 가격지수, 단지 순위와 입지 분석">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400;600&display=swap">
+<style>
+  :root {
+    --font-anthropic-sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    --font-anthropic-serif: "Noto Serif KR", "AppleMyungjo", "Batang", Georgia, serif;
+    --color-bg: #F3F4F7; --color-panel: #FFFFFF; --color-fg: #1C2230; --color-fg-muted: #667085;
+    --color-border-line: #E3E6EC; --color-ok: #1E8E5A; --color-warn: #B7791F; --color-bad: #D64545;
+    --cds-text-secondary: #667085; --cds-surface-popover: #FFFFFF; --cds-border: #D9DDE5;
+    --cds-shadow-popover: 0 6px 24px rgba(20, 30, 50, .12);
+    --cds-chart-grid: #ECEEF2; --cds-chart-axis: #B9BFCA; --cds-chart-reference: #8A93A3; --cds-chart-muted: #C9CFDA;
+    --cds-font-size-caption: 12px; --cds-font-size-body: 14px; --cds-font-size-heading: 17px; --cds-font-size-title: 26px;
+    --cds-font-weight-medium: 600;
+    --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px; --cds-gap-xl: 32px;
+    --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 18px; --cds-pad-xl: 26px;
+    --cds-radius: 8px; --cds-dur-slow: 300ms; --cds-ease-out: cubic-bezier(.2,.8,.2,1);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #12151C; --color-panel: #1B1F28; --color-fg: #E8EBF2; --color-fg-muted: #9AA3B4;
+      --color-border-line: #2C3240; --color-ok: #4CC38A; --color-warn: #E2A84B; --color-bad: #F07070;
+      --cds-text-secondary: #9AA3B4; --cds-surface-popover: #232835; --cds-border: #353C4C;
+      --cds-shadow-popover: 0 6px 24px rgba(0, 0, 0, .45);
+      --cds-chart-grid: #262B36; --cds-chart-axis: #4A5263; --cds-chart-reference: #7D8699; --cds-chart-muted: #3F4757;
+      color-scheme: dark;
+    }
+  }
+  html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: 14px; }
+  #dash-root { max-width: 1440px; margin: 0 auto; padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="assets/dash.js"></script>
+</head>
+<body>
+<div id="dash-root">
+<style>
+  .bp { --bp-up: #E0464A; --bp-down: #2F80ED; --bp-r: calc(var(--cds-radius) * 2); font-family: var(--font-anthropic-sans); display: flex; flex-direction: column; gap: var(--cds-gap-lg); }
+  .bp b, .bp strong { font-weight: 600; }
+  .bp-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cds-gap-sm) var(--cds-gap-md); }
+  .bp-top h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0 var(--cds-gap-sm) 0 0; }
+  .bp-top .grp { display: inline-flex; align-items: center; gap: 6px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bp-search { position: relative; }
+  .bp-results { position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; width: min(46rem, 92vw); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 6px; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: 4px; }
+  .bp-results:empty { display: none; }
+  .bp-reslist { max-height: 22rem; overflow: auto; min-width: 0; }
+  .bp-mini { position: relative; min-height: 280px; border-radius: var(--cds-radius); overflow: hidden; background: var(--color-bg); }
+  .bp-mini svg { display: block; }
+  .bp-mini .cap { position: absolute; left: 8px; bottom: 6px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bp-res.on { background: var(--color-bg); }
+  .bp-res .tag { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); border: 1px solid var(--color-border-line); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+  @media (max-width: 640px) { .bp-results { grid-template-columns: 1fr; } .bp-mini { min-height: 220px; } }
+  .bp-res { display: flex; align-items: center; gap: var(--cds-gap-sm); padding: 6px 8px; border-radius: var(--cds-radius); }
+  .bp-res:hover { background: var(--color-bg); }
+  .bp-res a { flex: 1; min-width: 0; color: var(--color-fg); text-decoration: none; font-size: var(--cds-font-size-body); }
+  .bp-res a:hover .nm { text-decoration: underline; }
+  .bp-res .sm { display: block; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bp-res button { font: inherit; font-size: var(--cds-font-size-caption); padding: 4px 8px; border: 1px solid var(--color-border-line); border-radius: 999px; background: var(--color-bg); color: var(--color-fg); cursor: pointer; white-space: nowrap; }
+  .bp-gbtn { display: inline-flex; align-items: center; gap: 4px; font-size: var(--cds-font-size-caption); padding: 6px 12px; border-radius: 999px; background: var(--color-fg); color: var(--color-bg); text-decoration: none; }
+  .bp .bp-search input[type=search] { width: min(18rem, 70vw); font: inherit; font-size: var(--cds-font-size-body); padding: 6px 14px; border: 1px solid var(--color-fg); border-radius: 999px; background: var(--color-bg); color: var(--color-fg); outline: none; }
+  .bp .bp-search input[type=search]:focus-visible { box-shadow: 0 0 0 2px var(--color-fg); }
+  .bp-nohit { font-size: var(--cds-font-size-caption); color: var(--color-bad); }
+  .bp-cardhead { display: flex; justify-content: space-between; align-items: center; gap: var(--cds-gap-md); }
+  .bp-zone { display: block; }
+  .bp-zone-l { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr)); gap: var(--cds-gap-lg); align-items: start; }
+  .bp-aptsum { min-height: 0; margin: var(--cds-gap-md) 0 0; }
+  .bp-aptsum:empty { display: none; }
+  .bp-aptsum .bp-table td, .bp-aptsum .bp-table th { padding: 6px; }
+  .bp-range { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 12px; border: 1px solid var(--color-border-line); border-radius: 999px; background: var(--color-bg); }
+  .bp .bp-range input[type=date] { border: 0; padding: 4px 6px; background: transparent; }
+  .bp-top .sep { width: 1px; height: 1.4rem; background: var(--color-border-line); }
+  .bp select, .bp input[type=date] { font: inherit; font-size: var(--cds-font-size-body); padding: 6px 10px; border: 1px solid var(--color-border-line); border-radius: 999px; background: var(--color-bg); color: var(--color-fg); min-width: 0; }
+  .bp-top select.region { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); padding-inline: 14px; }
+  .bp-seg { display: inline-flex; border: 1px solid var(--color-border-line); border-radius: 999px; overflow: hidden; }
+  .bp-seg button { font: inherit; font-size: var(--cds-font-size-caption); padding: 6px 12px; border: 0; background: var(--color-bg); color: var(--color-fg-muted); cursor: pointer; }
+  .bp-seg button + button { border-left: 1px solid var(--color-border-line); }
+  .bp-seg button[aria-pressed=true] { background: var(--color-fg); color: var(--color-bg); }
+  .bp button:focus-visible, .bp select:focus-visible, .bp input:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+  .bp-btn { font: inherit; font-size: var(--cds-font-size-caption); padding: 6px 12px; border: 1px solid var(--color-border-line); border-radius: 999px; background: var(--color-bg); color: var(--color-fg); cursor: pointer; }
+  .bp-picked { font: inherit; font-size: var(--cds-font-size-caption); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--color-fg); background: var(--color-bg); color: var(--color-fg); cursor: pointer; }
+
+  .bp-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--bp-r); padding: var(--cds-pad-xl) var(--cds-pad-xl) var(--cds-pad-lg); min-width: 0; display: flex; flex-direction: column; }
+  .bp-card h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+  .bp-card h2 select { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); padding: 2px 8px; }
+  .bp-sub { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: var(--cds-gap-md) 0 var(--cds-gap-sm); }
+  .bp-sub .lg { display: inline-flex; flex-wrap: wrap; gap: 4px var(--cds-gap-md); align-items: center; }
+  .bp-sw { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .bp-sq { display: inline-block; width: 9px; height: 9px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
+  .bp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; margin-right: 4px; }
+  .bp-cardfoot { display: flex; justify-content: space-between; align-items: center; gap: var(--cds-gap-md); margin-top: auto; padding-top: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .bp-go { font: inherit; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); background: none; border: 0; padding: 0; cursor: pointer; white-space: nowrap; }
+  .bp-go:hover { color: var(--color-fg); }
+  .bp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr)); gap: var(--cds-gap-lg); }
+
+  .bp-strip { padding-block: var(--cds-pad-lg); }
+  .bp-asof { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-bottom: var(--cds-gap-md); font-variant-numeric: tabular-nums; }
+  .bp-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--cds-gap-md) 0; }
+  .bp-col { padding: 0 var(--cds-pad-lg); border-left: 1px solid var(--color-border-line); min-width: 0; }
+  .bp-col-t { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-bottom: var(--cds-gap-sm); }
+  .bp-col-r { display: grid; grid-template-columns: minmax(3rem, auto) 1fr auto; gap: var(--cds-gap-sm); align-items: baseline; font-variant-numeric: tabular-nums; padding: 3px 0; }
+  .bp-col-r .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bp-col-r .v { text-align: right; }
+  .bp-col-r .c { text-align: right; min-width: 4.2rem; }
+  .up { color: var(--bp-up); }
+  .down { color: var(--bp-down); }
+
+  .bp-chart { position: relative; min-height: 320px; }
+  .bp-chart.donut { min-height: 300px; }
+  .bp-map { position: relative; min-height: 480px; }
+  .bp-chart svg, .bp-map svg { display: block; }
+  .bp-map svg { cursor: grab; touch-action: none; }
+  .bp-layers { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: var(--cds-gap-sm) 0; }
+  .bp-layers label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  .bp-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-sm); min-height: 1.2em; }
+  .bp-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .bp-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .bp-tip .k { color: var(--cds-text-secondary); }
+  .bp-fail { display: flex; align-items: center; justify-content: center; gap: var(--cds-gap-xs); min-height: inherit; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .bp-fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+  .bp-empty { display: flex; align-items: center; justify-content: center; min-height: inherit; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); text-align: center; padding: var(--cds-pad-md); }
+  .bp-tablewrap { overflow: auto; max-height: 30rem; }
+  .bp-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-body); font-variant-numeric: tabular-nums; }
+  .bp-table th, .bp-table td { padding: 8px var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); text-align: right; white-space: nowrap; }
+  .bp-table th { position: sticky; top: 0; background: var(--color-panel); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-weight: 400; }
+  .bp-table .l { text-align: left; }
+  .bp-table .sm { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bp-table tbody tr[data-key] { cursor: pointer; }
+  .bp-table tbody tr[data-key]:hover { background: var(--color-bg); }
+  .bp-table tr.sel { outline: 2px solid var(--color-fg); outline-offset: -2px; }
+  .bp-rank { color: var(--color-fg-muted); width: 2rem; }
+  .bp-loc { min-height: 280px; }
+  .bp-loc h3 { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: 0 0 var(--cds-gap-xs); }
+  .bp-loc .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--cds-gap-sm); margin-bottom: var(--cds-gap-md); }
+  .bp-loc .fact { border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-sm); }
+  .bp-loc .fact .v { font-family: var(--font-anthropic-serif); font-size: var(--cds-font-size-heading); font-variant-numeric: tabular-nums; }
+  .bp-loc .fact .c { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bp-pill { display: inline-block; font-size: var(--cds-font-size-caption); padding: 1px 8px; border-radius: 999px; border: 1px solid var(--color-border-line); margin-bottom: var(--cds-gap-sm); }
+  .bp-pill.good { color: var(--color-ok); border-color: currentColor; }
+  .bp-pill.mid { color: var(--color-warn); border-color: currentColor; }
+  .bp-tabs { margin: var(--cds-gap-md) 0; align-self: start; }
+  .bp-tabs button[aria-selected=true] { background: var(--color-fg); color: var(--color-bg); }
+  .bp-gtx p { max-width: 72ch; margin: 0 0 var(--cds-gap-sm); }
+  .bp-glink { color: var(--color-fg); text-decoration: underline; text-underline-offset: 2px; }
+  .bp-glink::after { content: " ↗"; color: var(--color-fg-muted); }
+  .bp-gmap { font-size: var(--cds-font-size-caption); margin: var(--cds-gap-sm) 0 0; min-height: 1.2em; }
+  .bp-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: var(--cds-gap-xs) 0 0; max-width: 80ch; }
+  .bp-foot { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); max-width: 90ch; display: flex; flex-direction: column; gap: 4px; }
+  .bp-foot p { margin: 0; }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  @media (max-width: 640px) { .bp-table .hide-narrow { display: none; } .bp-map { min-height: 380px; } .bp-card { padding: var(--cds-pad-lg); } }
+</style>
+
+<div class="bp">
+  <header class="bp-top" id="top">
+    <h1>부산 아파트 통계보드</h1>
+    <select id="bp-gu" class="region" data-draw="gu-select" data-source="trades" aria-label="구·군"></select>
+    <select id="bp-dong" data-draw="dong-select" data-source="trades" aria-label="동"></select>
+    <span class="grp bp-search"><input id="bp-q" type="search" placeholder="단지·아파트 이름 검색" aria-label="단지·아파트 이름 검색" autocomplete="off"><span class="bp-nohit" id="bp-nohit" hidden>찾는 단지가 없습니다</span><div class="bp-results" id="bp-results" data-draw="search-results" data-source="complexes poi gu_shapes"></div></span>
+    <span class="grp bp-range" role="group" aria-label="조회 기간">기간 <input id="bp-start" type="date" min="2025-01-01" max="2026-12-31" aria-label="조회 시작일"><span aria-hidden="true">~</span><input id="bp-end" type="date" min="2025-01-01" max="2026-12-31" aria-label="기준일(끝 날짜)"></span>
+    <div class="bp-seg" role="group" aria-label="거래 유형">
+      <button type="button" data-type="sale" aria-pressed="true">매매</button>
+      <button type="button" data-type="jeonse" aria-pressed="false">전세</button>
+      <button type="button" data-type="wolse" aria-pressed="false">월세</button>
+    </div>
+    <button type="button" class="bp-btn" id="bp-reset">초기화</button>
+    <button type="button" class="bp-picked" id="bp-picked" hidden><span data-draw="picked-name">—</span> ×</button>
+  </header>
+
+
+  <section class="bp-card" id="result" hidden>
+    <div class="bp-cardhead"><h2 data-draw="map-title">—</h2><span class="bp-cardhead"><span data-draw="gmap-top" data-source="complexes"></span><button type="button" class="bp-btn" id="bp-close">닫기 ×</button></span></div>
+    <p class="bp-note">고른 단지의 시세와 입지입니다. Google 지도 팝업이 함께 뜨며, 막혀 있으면 오른쪽 위 버튼을 누르세요. 거리는 직선거리, 도보는 분당 80m 기준입니다.</p>
+    <div class="bp-loc bp-aptsum" data-draw="apt-summary" data-source="trades rents"></div>
+    <div class="bp-seg bp-tabs" role="tablist" aria-label="입지 항목">
+      <button type="button" role="tab" data-loc="school" aria-selected="true">학군</button>
+      <button type="button" role="tab" data-loc="subway" aria-selected="false">지하철</button>
+      <button type="button" role="tab" data-loc="rail" aria-selected="false">KTX·동해선</button>
+      <button type="button" role="tab" data-loc="gtx" aria-selected="false">GTX</button>
+    </div>
+    <div class="bp-loc" data-draw="loc" data-source="poi complexes gu_shapes"></div>
+    <div class="bp-gtx" data-loc-panel="gtx" hidden>
+      <p><strong>부산에는 GTX 노선이 없습니다.</strong> GTX(수도권 광역급행철도)는 서울·경기·인천을 잇는 수도권 전용 사업입니다.</p>
+      <p>부산권에서 같은 역할을 하는 광역철도는 동해선(부전–태화강), 부전–마산 복선전철, 부산김해경전철이며, 부산–양산–울산 광역철도가 추진 중입니다. 이 노선들은 KTX·동해선 탭과 지하철 탭에서 볼 수 있습니다.</p>
+    </div>
+  </section>
+
+  <section class="bp-card bp-strip" id="summary" data-source="trades rents">
+    <div class="bp-asof"><span data-draw="asof">—</span> 기준 · 지수는 4주 이동 중앙값, 2026.01.12 주 = 100</div>
+    <div class="bp-cols">
+      <div class="bp-col">
+        <div class="bp-col-t">주간 매매지수</div>
+        <div class="bp-col-r"><span class="nm">부산</span><span class="v" data-draw="m" data-m="sale_idx" data-a="busan">—</span><span class="c" data-draw="mc" data-m="sale_idx" data-a="busan">—</span></div>
+        <div class="bp-col-r bp-selrow"><span class="nm" data-draw="selname">—</span><span class="v" data-draw="m" data-m="sale_idx" data-a="sel">—</span><span class="c" data-draw="mc" data-m="sale_idx" data-a="sel">—</span></div>
+      </div>
+      <div class="bp-col">
+        <div class="bp-col-t">주간 전세지수</div>
+        <div class="bp-col-r"><span class="nm">부산</span><span class="v" data-draw="m" data-m="jeonse_idx" data-a="busan">—</span><span class="c" data-draw="mc" data-m="jeonse_idx" data-a="busan">—</span></div>
+        <div class="bp-col-r bp-selrow"><span class="nm" data-draw="selname">—</span><span class="v" data-draw="m" data-m="jeonse_idx" data-a="sel">—</span><span class="c" data-draw="mc" data-m="jeonse_idx" data-a="sel">—</span></div>
+      </div>
+      <div class="bp-col">
+        <div class="bp-col-t">주간 매매가격 (4주 평균)</div>
+        <div class="bp-col-r"><span class="nm">부산</span><span class="v" data-draw="m" data-m="sale_avg" data-a="busan">—</span><span class="c" data-draw="mc" data-m="sale_avg" data-a="busan">—</span></div>
+        <div class="bp-col-r bp-selrow"><span class="nm" data-draw="selname">—</span><span class="v" data-draw="m" data-m="sale_avg" data-a="sel">—</span><span class="c" data-draw="mc" data-m="sale_avg" data-a="sel">—</span></div>
+      </div>
+      <div class="bp-col">
+        <div class="bp-col-t">주간 전세가격 (4주 평균)</div>
+        <div class="bp-col-r"><span class="nm">부산</span><span class="v" data-draw="m" data-m="jeonse_avg" data-a="busan">—</span><span class="c" data-draw="mc" data-m="jeonse_avg" data-a="busan">—</span></div>
+        <div class="bp-col-r bp-selrow"><span class="nm" data-draw="selname">—</span><span class="v" data-draw="m" data-m="jeonse_avg" data-a="sel">—</span><span class="c" data-draw="mc" data-m="jeonse_avg" data-a="sel">—</span></div>
+      </div>
+      <div class="bp-col">
+        <div class="bp-col-t"><span data-draw="month-label">—</span> 매매 거래량</div>
+        <div class="bp-col-r"><span class="nm">부산</span><span class="v" data-draw="m" data-m="vol" data-a="busan">—</span><span class="c" data-draw="mc" data-m="vol" data-a="busan">—</span></div>
+        <div class="bp-col-r bp-selrow"><span class="nm" data-draw="selname">—</span><span class="v" data-draw="m" data-m="vol" data-a="sel">—</span><span class="c" data-draw="mc" data-m="vol" data-a="sel">—</span></div>
+      </div>
+      <div class="bp-col">
+        <div class="bp-col-t">전세가율 (최근 3개월)</div>
+        <div class="bp-col-r"><span class="nm">부산</span><span class="v" data-draw="m" data-m="ratio" data-a="busan">—</span><span class="c" data-draw="mc" data-m="ratio" data-a="busan">—</span></div>
+        <div class="bp-col-r bp-selrow"><span class="nm" data-draw="selname">—</span><span class="v" data-draw="m" data-m="ratio" data-a="sel">—</span><span class="c" data-draw="mc" data-m="ratio" data-a="sel">—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bp-grid">
+    <div class="bp-card" id="idx-card" data-source="trades rents">
+      <h2>주간 아파트 <select id="bp-idx-kind" aria-label="지수 종류"><option value="sale">매매</option><option value="jeonse">전세</option></select> 가격지수</h2>
+      <div class="bp-sub">
+        <span class="lg">(좌) 가격지수 <span><span class="bp-sw" style="background: var(--bp-up)"></span><span data-draw="areaname">—</span></span></span>
+        <span class="lg">(우) 주간 변동률(%) <span><span class="bp-sq" style="background: var(--bp-up)"></span>상승</span><span><span class="bp-sq" style="background: var(--bp-down)"></span>하락</span></span>
+      </div>
+      <div class="bp-chart" data-draw="idx-chart"></div>
+      <div class="bp-cardfoot"><span><span data-draw="asof">—</span> 기준</span><button type="button" class="bp-go" data-goto="rank-card">지역별 상승률 바로가기 ›</button></div>
+    </div>
+
+    <div class="bp-card" id="rank-card" data-source="trades rents">
+      <h2>최근 4주 <select id="bp-rank-kind" aria-label="가격 종류"><option value="sale">매매</option><option value="jeonse">전세</option></select> 평당가 상승률 지역 TOP</h2>
+      <div class="bp-sub">
+        <select id="bp-rank-order" aria-label="정렬"><option value="desc">상승률 높은 순</option><option value="asc">상승률 낮은 순</option></select>
+        <span>단위: % · 직전 4주 대비, <span data-draw="rank-unit">—</span></span>
+      </div>
+      <div class="bp-chart" data-draw="rank-chart"></div>
+      <div class="bp-cardfoot"><span><span data-draw="asof">—</span> 기준</span><button type="button" class="bp-go" data-goto="top10">단지 순위 바로가기 ›</button></div>
+    </div>
+
+    <div class="bp-card" id="avg-card" data-source="trades rents">
+      <h2>주간 아파트 <select id="bp-avg-kind" aria-label="가격 종류"><option value="sale">매매</option><option value="jeonse">전세</option></select> 평균가격</h2>
+      <div class="bp-sub">
+        <span class="lg"><span><span class="bp-sw" style="background: var(--cds-chart-muted)"></span>부산</span><span class="bp-selrow"><span class="bp-sw" style="background: var(--bp-up)"></span><span data-draw="selname">—</span></span></span>
+        <span>단위: 억 원 · 4주 평균</span>
+      </div>
+      <div class="bp-chart" data-draw="avg-chart"></div>
+      <div class="bp-cardfoot"><span><span data-draw="asof">—</span> 기준</span><button type="button" class="bp-go" data-goto="deals">최근 거래 바로가기 ›</button></div>
+    </div>
+
+    <div class="bp-card" id="mix-card" data-source="trades rents">
+      <h2>월간 거래 유형 비중</h2>
+      <div class="bp-sub">
+        <span class="lg"><span><span class="bp-dot" style="background: var(--bp-c0)"></span>매매</span><span><span class="bp-dot" style="background: var(--bp-c1)"></span>전세</span><span><span class="bp-dot" style="background: var(--bp-c2)"></span>월세</span></span>
+        <span>거래 비율(%)</span>
+      </div>
+      <div class="bp-chart donut" data-draw="mix-donut"></div>
+      <div class="bp-cardfoot"><span><span data-draw="month-label">—</span> 기준</span><button type="button" class="bp-go" data-goto="vol-card">월간 거래량 바로가기 ›</button></div>
+    </div>
+
+    <div class="bp-card" id="band-card" data-source="trades">
+      <h2>월간 매매가격대 분포</h2>
+      <div class="bp-sub">
+        <span class="lg" data-draw="band-legend">—</span>
+        <span>거래 비율(%)</span>
+      </div>
+      <div class="bp-chart donut" data-draw="band-donut"></div>
+      <div class="bp-cardfoot"><span><span data-draw="month-label">—</span> 기준</span><button type="button" class="bp-go" data-goto="idx-card">가격지수 바로가기 ›</button></div>
+    </div>
+
+    <div class="bp-card" id="vol-card" data-source="trades rents">
+      <h2>월간 거래량</h2>
+      <div class="bp-sub">
+        <span class="lg"><span><span class="bp-sq" style="background: var(--bp-c0)"></span>매매</span><span><span class="bp-sq" style="background: var(--bp-c1)"></span>전세</span><span><span class="bp-sq" style="background: var(--bp-c2)"></span>월세</span></span>
+        <span>단위: 건</span>
+      </div>
+      <div class="bp-chart" data-draw="vol-chart"></div>
+      <div class="bp-cardfoot"><span>최근 한 달은 신고 기한(30일) 때문에 덜 잡힙니다</span><button type="button" class="bp-go" data-goto="deals">최근 거래 바로가기 ›</button></div>
+    </div>
+
+    <div class="bp-card" id="ratio-card" data-source="trades rents">
+      <h2>월간 전세가율</h2>
+      <div class="bp-sub">
+        <span class="lg"><span><span class="bp-sq" style="background: var(--cds-chart-muted)"></span>매매 평당가</span><span><span class="bp-sw" style="background: var(--bp-up)"></span>전세가율</span></span>
+        <span>전세 평당가 중앙값 ÷ 매매 평당가 중앙값</span>
+      </div>
+      <div class="bp-chart" data-draw="ratio-chart"></div>
+      <div class="bp-cardfoot"><span><span data-draw="month-label">—</span> 기준</span><button type="button" class="bp-go" data-goto="reb-card">부동산원 지수 바로가기 ›</button></div>
+    </div>
+  </section>
+
+  <section class="bp-zone" id="apt-zone">
+    <div class="bp-zone-l">
+      <div class="bp-card" id="rise-card" data-source="trades rents">
+        <h2>3.3㎡당 <select id="bp-rise-kind" aria-label="가격 종류"><option value="sale">매매</option><option value="jeonse">전세</option></select> 시세 상승 단지 TOP</h2>
+        <div class="bp-sub"><span>최근 3개월 중앙값을 직전 3개월과 비교, 두 기간 모두 거래 2건 이상</span><span>전용 기준</span></div>
+        <div class="bp-tablewrap" data-draw="rise-table"></div>
+        <div class="bp-cardfoot"><span><span data-draw="asof">—</span> 기준</span><button type="button" class="bp-go" data-goto="top10">단지 순위 바로가기 ›</button></div>
+      </div>
+
+      <section class="bp-card" id="top10" data-source="trades rents">
+        <h2>단지 TOP 10</h2>
+        <div class="bp-sub">
+          <div class="bp-seg" role="tablist" aria-label="순위 기준">
+            <button type="button" role="tab" data-top="price" aria-pressed="true">거래가</button>
+            <button type="button" role="tab" data-top="ppy" aria-pressed="false">평당가</button>
+            <button type="button" role="tab" data-top="count" aria-pressed="false">거래량</button>
+          </div>
+          <span>위 거래 유형과 조회 기간 기준 · 평당가 순위는 거래 3건 이상 단지 · 행을 누르면 지도와 입지 분석이 바뀝니다</span>
+        </div>
+        <div class="bp-tablewrap" data-draw="top10"></div>
+      </section>
+    </div>
+  </section>
+
+
+  <section class="bp-grid">
+    <div class="bp-card" id="areas" data-source="trades rents">
+      <h2>지역별 평당가</h2>
+      <p class="bp-note">구를 고르지 않으면 구별로, 고르면 동별로 조회 기간의 평당가 중앙값을 비교합니다. 막대를 누르면 그 지역으로 좁혀집니다.</p>
+      <div class="bp-chart" data-draw="areas"></div>
+    </div>
+    <div class="bp-card" id="reb-card">
+      <h2>부산 매매가격지수 (한국부동산원)</h2>
+      <p class="bp-note">한국부동산원 월간 지수, 2026년 3월~8월. 점선은 100입니다. 위 실거래가 지수와는 계산 방식이 다릅니다.</p>
+      <div class="bp-chart" data-draw="reb" data-source="price_index"></div>
+    </div>
+  </section>
+
+  <section class="bp-card" id="deals" data-source="trades rents">
+    <h2>최근 거래</h2>
+    <p class="bp-note">조건에 맞는 거래를 최신순으로 최대 200건 보여줍니다. 행을 누르면 그 단지를 고릅니다.</p>
+    <div class="bp-tablewrap" data-draw="recent"></div>
+  </section>
+
+  <footer class="bp-foot">
+    <p>거래 자료: 국토교통부 아파트 매매·전월세 실거래가(공공데이터포털), 2025년 1월~2026년 10월 계약분. 해제된 매매 거래는 뺐습니다. 실거래는 계약 후 30일 안에 신고되므로 최근 한 달은 건수가 덜 잡혀 있습니다.</p>
+    <p>가격지수는 시세 조사가 아닌 실거래가로 계산했습니다. 각 주에 앞선 4주 거래의 평당가 중앙값을 2026년 1월 12일 주 값으로 나눈 값이라, 그 주에 어떤 단지가 거래됐는지에 따라 흔들립니다. 평당가는 전용면적 3.3058㎡ 기준이며, 월세는 보증금에 연 월세를 전환율 연 <span data-draw="conv-rate">—</span>%로 나눈 금액을 더해 환산했습니다.</p>
+    <p>단지·역·학교 위치: OpenStreetMap 기여자(ODbL). 단지 위치는 오픈스트리트맵의 단지 이름과 맞춰 찾아 일부 단지(약 650곳)만 있으며, 나머지 단지는 구 기준으로 보여주고 Google 지도에서는 이름으로 검색합니다. 구 경계: 통계청 2013년 행정경계(southkorea-maps). 지수: 한국부동산원 R-ONE.</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+  window.bp = (() => {
+    const PY = 3.3058;
+    const CONV = 0.06;
+    const BASE = '2026-01-12';
+    const cache = new Map();
+    const parse = (id) => {
+      const d = dash.data(id);
+      if (d.status !== 'ok') return null;
+      const c = cache.get(id);
+      if (c && c.src === d.data) return c.rows;
+      let rows = [];
+      if (id === 'trades') {
+        rows = d.data.map((r) => { const area = Number(r.area), price = Number(r.price); return { date: r.date, gu: r.gu, dong: r.dong, apt: r.apt, area, floor: r.floor, amt: price, rent: 0, conv: price, ppy: price / (area / PY), kind: 'sale' }; });
+      } else if (id === 'rents') {
+        rows = d.data.map((r) => { const area = Number(r.area), dep = Number(r.deposit), rent = Number(r.rent); const conv = dep + (rent * 12) / CONV; return { date: r.date, gu: r.gu, dong: r.dong, apt: r.apt, area, floor: r.floor, amt: dep, rent, conv, ppy: conv / (area / PY), kind: rent > 0 ? 'wolse' : 'jeonse' }; });
+      } else if (id === 'complexes') {
+        const located = new Map(d.data.filter((r) => r.lat !== '' && r.lat != null).map((r) => [r.gu + '|' + r.dong + '|' + r.apt, { lat: Number(r.lat), lon: Number(r.lon) }]));
+        located.all = d.data.map((r) => r.gu + '|' + r.dong + '|' + r.apt);
+        rows = located;
+      } else if (id === 'poi') {
+        rows = d.data.map((r) => ({ kind: r.kind, name: r.name, line: r.line, gu: r.gu, lat: Number(r.lat), lon: Number(r.lon) }));
+      } else if (id === 'gu_shapes') {
+        rows = d.data.map((r) => ({ gu: r.gu, polys: typeof r.polys === 'string' ? JSON.parse(r.polys) : r.polys }));
+      }
+      // 원본이 바뀌면 파생 캐시도 비움
+      [...cache.keys()].forEach((k) => { if (typeof k === 'string' && k.includes('|')) cache.delete(k); });
+      cache.set(id, { src: d.data, rows });
+      return rows;
+    };
+    const status = (...ids) => {
+      const s = ids.map((i) => dash.data(i).status);
+      if (s.some((x) => x === 'error' || x === 'connect' || x === 'declined')) return 'error';
+      return s.every((x) => x === 'ok') ? 'ok' : 'loading';
+    };
+    const P = () => { const p = dash.params(); return { type: p.type || 'sale', gu: p.gu || null, dong: p.dong || null, start: p.start || null, end: p.end || null, apt: p.apt || null }; };
+    const srcId = (type) => (type === 'sale' ? 'trades' : 'rents');
+    const key = (r) => r.gu + '|' + r.dong + '|' + r.apt;
+    const rowsFor = (o = {}) => {
+      const p = { ...P(), ...o };
+      const src = parse(srcId(p.type));
+      if (!src) return null;
+      return src.filter((r) => (p.type === 'sale' || r.kind === p.type) && (!p.gu || r.gu === p.gu) && (!p.dong || r.dong === p.dong)
+        && (!p.start || r.date >= p.start) && (!p.end || r.date <= p.end) && (!p.apt || key(r) === p.apt));
+    };
+    const areaRows = (kind, gu, dong) => {
+      const src = parse(kind === 'sale' ? 'trades' : 'rents');
+      if (!src) return null;
+      const p = P(); const k = ['rows', kind, gu, dong, p.end].join('|');
+      if (cache.has(k)) return cache.get(k);
+      const out = src.filter((r) => (kind === 'sale' || r.kind === kind) && (!gu || r.gu === gu) && (!dong || r.dong === dong) && (!p.end || r.date <= p.end));
+      cache.set(k, out); return out;
+    };
+    const day = (s) => new Date(s + 'T00:00:00Z');
+    const iso = d3.utcFormat('%Y-%m-%d');
+    const weekly = (kind, gu, dong) => {
+      const rows = areaRows(kind, gu, dong);
+      if (!rows) return null;
+      const p = P(); const k = ['wk', kind, gu, dong, p.end].join('|');
+      if (cache.has(k)) return cache.get(k);
+      const byW = d3.group(rows, (r) => +d3.utcMonday(day(r.date)));
+      const endW = d3.utcMonday(day(p.end || '2026-10-31'));
+      const weeks = d3.utcMonday.range(d3.utcMonday(day('2025-01-27')), d3.utcMonday.offset(endW, 1));
+      const out = weeks.map((w) => {
+        const win = [];
+        for (let j = 0; j < 4; j += 1) { const a = byW.get(+d3.utcMonday.offset(w, -j)); if (a) win.push(...a); }
+        return { t: w, n: (byW.get(+w) || []).length, n4: win.length, med: win.length >= 5 ? d3.median(win, (r) => r.ppy) : null, mean: win.length >= 3 ? d3.mean(win, (r) => r.amt) : null };
+      });
+      const base = out.find((x) => iso(x.t) === BASE && x.med) || out.find((x) => x.med);
+      out.forEach((x, i) => {
+        x.idx = x.med && base ? (x.med / base.med) * 100 : null;
+        const pv = out[i - 1];
+        x.chg = x.idx && pv && pv.idx ? (x.idx / pv.idx - 1) * 100 : null;
+        x.mchg = x.mean && pv && pv.mean ? (x.mean / pv.mean - 1) * 100 : null;
+      });
+      cache.set(k, out); return out;
+    };
+    const monthly = (gu, dong) => {
+      const s = areaRows('sale', gu, dong), j = areaRows('jeonse', gu, dong), w = areaRows('wolse', gu, dong);
+      if (!s || !j || !w) return null;
+      const p = P(); const k = ['mo', gu, dong, p.end].join('|');
+      if (cache.has(k)) return cache.get(k);
+      const endM = d3.utcMonth(day(p.end || '2026-10-31'));
+      const months = d3.utcMonth.range(d3.utcMonth.offset(endM, -11), d3.utcMonth.offset(endM, 1));
+      const g = (rows) => d3.group(rows, (r) => r.date.slice(0, 7));
+      const gs = g(s), gj = g(j), gw = g(w);
+      const fm = d3.utcFormat('%Y-%m');
+      const out = months.map((m) => {
+        const mk = fm(m);
+        const s3 = [], j3 = [];
+        for (let q = 0; q < 3; q += 1) { const mm = fm(d3.utcMonth.offset(m, -q)); s3.push(...(gs.get(mm) || [])); j3.push(...(gj.get(mm) || [])); }
+        const sp = s3.length >= 5 ? d3.median(s3, (r) => r.ppy) : null, jp = j3.length >= 5 ? d3.median(j3, (r) => r.ppy) : null;
+        const sr = gs.get(mk) || [];
+        return { t: m, key: mk, sale: sr.length, jeonse: (gj.get(mk) || []).length, wolse: (gw.get(mk) || []).length, saleRows: sr, salePpy: sr.length >= 3 ? d3.median(sr, (r) => r.ppy) : null, ratio: sp && jp ? (jp / sp) * 100 : null };
+      });
+      cache.set(k, out); return out;
+    };
+    const fmt = d3.format(',');
+    const money = (v) => { if (v == null || !isFinite(v)) return '—'; v = Math.round(v); const eok = Math.floor(v / 10000), man = v % 10000; if (!eok) return fmt(man) + '만'; return eok + '억' + (man ? ' ' + fmt(man) + '만' : ''); };
+    const eok = (v) => (v == null || !isFinite(v) ? '—' : (v / 10000).toFixed(2) + '억');
+    const signed = (v, d = 2, u = '%') => (v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + v.toFixed(d) + u);
+    const updown = (el, v) => { el.classList.toggle('up', v > 0); el.classList.toggle('down', v < 0); };
+    const hav = (a, b) => { const R = 6371000, t = Math.PI / 180; const dLat = (b.lat - a.lat) * t, dLon = (b.lon - a.lon) * t; const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * t) * Math.cos(b.lat * t) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(s)); };
+    const dist = (m) => (m < 1000 ? Math.round(m) + 'm' : (m / 1000).toFixed(1) + 'km');
+    const walk = (m) => Math.max(1, Math.round(m / 80)) + '분';
+    const resolve = (el, c) => { const s = document.createElement('span'); s.style.color = c; el.appendChild(s); const v = getComputedStyle(s).color; s.remove(); return v; };
+    const placeTip = (box, tip, x, y) => { const w = tip.offsetWidth, h = tip.offsetHeight, W = box.clientWidth; tip.style.left = Math.max(0, Math.min(W - w, x + 12)) + 'px'; tip.style.top = (y - h - 10 < 0 ? y + 14 : y - h - 10) + 'px'; };
+    const tipLines = (tip, head, lines) => { const k = document.createElement('div'); k.className = 'k'; k.textContent = head; tip.replaceChildren(k, ...lines.map((t) => { const d = document.createElement('div'); d.textContent = t; return d; })); tip.hidden = false; };
+    const failed = (el) => { const f = document.createElement('div'); f.className = 'bp-fail'; f.textContent = 'Failed to load'; el.replaceChildren(f); };
+    const empty = (el, text) => { const f = document.createElement('div'); f.className = 'bp-empty'; f.textContent = text; el.replaceChildren(f); };
+    const areaName = () => { const p = P(); return p.dong ? p.dong : p.gu ? p.gu : '부산'; };
+    const LINE_COLORS = { '1호선': '#F06A00', '2호선': '#81BF48', '3호선': '#BB8C00', '4호선': '#217DCB', '부산김해경전철': '#8652A1', '동해선': '#0B5BAA', '부전마산선': '#2E9C8F', '동해선·부전마산선': '#0B5BAA', 'KTX 경부선': '#1B2F6E', 'KTX-이음 중앙선': '#1B2F6E' };
+    const TYPE_NAME = { sale: '매매', jeonse: '전세', wolse: '월세' };
+    const SCHOOL_NAME = { elem: '초등학교', middle: '중학교', high: '고등학교' };
+    const state = { loc: 'school', top: 'price', idxKind: 'sale', rankKind: 'sale', rankOrder: 'desc', avgKind: 'sale', riseKind: 'sale' };
+    const pick = (k) => { if (!k) { dash.setParams({ apt: null }); return; } const [gu, dong] = k.split('|'); dash.setParams({ apt: k, gu, dong }); };
+    const svgBox = (el, H) => { el.replaceChildren(); const W = Math.max(300, el.clientWidth); const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`); return { W, svg }; };
+    const caption = (sel) => sel.attr('fill', 'var(--color-fg-muted)').attr('font-size', 'var(--cds-font-size-caption)');
+    const addTip = (el) => { const tip = document.createElement('div'); tip.className = 'bp-tip'; tip.hidden = true; el.appendChild(tip); return tip; };
+    return { PY, CONV, BASE, parse, status, P, srcId, key, rowsFor, areaRows, weekly, monthly, day, iso, fmt, money, eok, signed, updown, hav, dist, walk, resolve, placeTip, tipLines, failed, empty, areaName, LINE_COLORS, TYPE_NAME, SCHOOL_NAME, state, pick, svgBox, caption, addTip };
+  })();
+
+})();
+</script>
+
+<script>
+(() => {
+  // 필터와 컨트롤
+  const B = window.bp;
+  const DATA_END = '2026-10-31';
+  const today = B.iso(new Date());
+  const setDefaults = () => {
+    const end = today < DATA_END ? today : DATA_END;
+    const s = B.day(end); s.setUTCFullYear(s.getUTCFullYear() - 1); s.setUTCDate(s.getUTCDate() + 1);
+    const p = dash.params();
+    dash.setParams({ start: p.start || B.iso(s), end: p.end || end, type: p.type || 'sale' });
+  };
+  setDefaults();
+  document.querySelectorAll('.bp').forEach((root) => {
+    root.style.setProperty('--bp-c0', dash.colors[0]); root.style.setProperty('--bp-c1', dash.colors[1]); root.style.setProperty('--bp-c2', dash.colors[2]);
+  });
+  document.querySelectorAll('[data-type]').forEach((b) => b.addEventListener('click', () => dash.setParams({ type: b.dataset.type })));
+  document.querySelectorAll('#bp-gu').forEach((sel) => sel.addEventListener('change', () => dash.setParams({ gu: sel.value || null, dong: null, apt: null })));
+  document.querySelectorAll('#bp-dong').forEach((sel) => sel.addEventListener('change', () => dash.setParams({ dong: sel.value || null, apt: null })));
+  document.querySelectorAll('#bp-start, #bp-end').forEach((inp) => {
+    const name = inp.id === 'bp-start' ? 'start' : 'end';
+    inp.addEventListener('change', () => { if (inp.value && inp.validity.valid) dash.setParams({ [name]: inp.value }); });
+    inp.addEventListener('blur', () => { inp.value = dash.params()[name] || ''; });
+  });
+  document.querySelectorAll('#bp-reset').forEach((b) => b.addEventListener('click', () => { dash.resetParams(); dash.setParams({ start: null, end: null, gu: null, dong: null, apt: null }); setDefaults(); }));
+  document.querySelectorAll('#bp-picked').forEach((b) => b.addEventListener('click', () => B.pick(null)));
+  document.querySelectorAll('#bp-close').forEach((b) => b.addEventListener('click', () => { B.pick(null); document.querySelectorAll('#bp-q').forEach((i) => { i.value = ''; }); }));
+  const bindSel = (id, field, draws) => document.querySelectorAll('#' + id).forEach((s) => s.addEventListener('change', () => { B.state[field] = s.value; draws.forEach((d) => dash.draw(d)); }));
+  bindSel('bp-idx-kind', 'idxKind', ['idx-chart']);
+  bindSel('bp-rank-kind', 'rankKind', ['rank-chart']);
+  bindSel('bp-rank-order', 'rankOrder', ['rank-chart']);
+  bindSel('bp-avg-kind', 'avgKind', ['avg-chart']);
+  bindSel('bp-rise-kind', 'riseKind', ['rise-table']);
+  document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('#' + b.dataset.goto).forEach((t) => { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); dash.setLink(t.id); });
+  }));
+  document.querySelectorAll('[data-loc]').forEach((b) => b.addEventListener('click', () => {
+    B.state.loc = b.dataset.loc;
+    document.querySelectorAll('[data-loc]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+    document.querySelectorAll('[data-loc-panel]').forEach((x) => { x.hidden = x.dataset.locPanel !== B.state.loc; });
+    document.querySelectorAll('[data-draw=loc]').forEach((x) => { x.hidden = B.state.loc === 'gtx'; });
+    dash.draw('loc');
+  }));
+  document.querySelectorAll('[data-top]').forEach((b) => b.addEventListener('click', () => {
+    B.state.top = b.dataset.top;
+    document.querySelectorAll('[data-top]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    dash.draw('top10');
+  }));
+  document.querySelectorAll('[data-draw=top10], [data-draw=recent], [data-draw=rise-table]').forEach((box) => box.addEventListener('click', (ev) => {
+    const tr = ev.target.closest('tr[data-key]');
+    if (!tr) return;
+    B.pick(tr.dataset.key);
+    B.popMap(tr.dataset.key);
+    document.querySelectorAll('#result').forEach((m) => setTimeout(() => m.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50));
+  }));
+  dash.onData(() => {
+    const p = B.P();
+    document.querySelectorAll('[data-type]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.type === p.type)));
+    document.querySelectorAll('#bp-start').forEach((i) => { if (i !== document.activeElement) i.value = p.start || ''; });
+    document.querySelectorAll('#bp-end').forEach((i) => { if (i !== document.activeElement) i.value = p.end || ''; });
+    document.querySelectorAll('#bp-picked').forEach((b) => { b.hidden = !p.apt; });
+    document.querySelectorAll('#result').forEach((r) => { r.hidden = !p.apt; });
+    document.querySelectorAll('.bp-selrow').forEach((r) => { r.hidden = !p.gu; });
+  });
+  // 단지 검색
+  const norm = (t) => (t || '').replace(/\s|아파트/g, '').toLowerCase();
+  const findApt = (q) => {
+    const cpx = B.parse('complexes');
+    if (!cpx || !q.trim()) return null;
+    const keys = cpx.all || [...cpx.keys()];
+    const exact = keys.find((k) => { const [gu, dong, apt] = k.split('|'); return `${apt} (${gu} ${dong})` === q; });
+    if (exact) return exact;
+    const n = norm(q);
+    const hits = keys.filter((k) => norm(k.split('|')[2]).includes(n) || norm(k.replaceAll('|', '')).includes(n));
+    hits.sort((a, b) => (norm(a.split('|')[2]) === n ? -1 : 0) - (norm(b.split('|')[2]) === n ? -1 : 0) || a.split('|')[2].length - b.split('|')[2].length);
+    return hits[0] || null;
+  };
+  const gmapUrl = (k) => { const cpx = B.parse('complexes'); const loc = cpx && cpx.get(k); const [gu, dong, apt] = k.split('|'); return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(loc ? loc.lat + ',' + loc.lon : `부산 ${gu} ${dong} ${apt} 아파트`); };
+  B.gmapUrl = gmapUrl;
+  B.popMap = (k) => { try { const w = window.open(gmapUrl(k), 'bp-gmap', 'popup=yes,width=960,height=720,left=120,top=80'); if (w) w.focus(); } catch (e) { /* 팝업이 막히면 카드의 버튼으로 연다 */ } };
+  B.state.q = '';
+  const runSearch = (inp) => {
+    const k = findApt(inp.value);
+    document.querySelectorAll('#bp-nohit').forEach((m) => { m.hidden = !!k || !inp.value.trim(); });
+    if (!k) return;
+    B.state.q = ''; dash.draw('search-results');
+    B.pick(k);
+    B.popMap(k);
+    document.querySelectorAll('#result').forEach((m) => setTimeout(() => m.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50));
+  };
+  document.querySelectorAll('#bp-q').forEach((inp) => {
+    inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') runSearch(inp); if (ev.key === 'Escape') { B.state.q = ''; dash.draw('search-results'); } });
+    inp.addEventListener('input', () => {
+      document.querySelectorAll('#bp-nohit').forEach((m) => { m.hidden = true; });
+      B.state.q = inp.value; dash.draw('search-results');
+    });
+  });
+  // Google 지도 링크는 팝업창으로, 팝업이 막히면 링크대로 새 탭
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest('a.bp-pop, a.bp-glink, a.bp-gbtn');
+    if (a) {
+      const w = window.open(a.href, 'bp-gmap', 'popup=yes,width=960,height=720,left=120,top=80');
+      if (w) { ev.preventDefault(); try { w.focus(); } catch (e) { /* 무시 */ } }
+      return;
+    }
+    if (!ev.target.closest('.bp-search') && B.state.q) { B.state.q = ''; dash.draw('search-results'); }
+  });
+  document.querySelectorAll('#bp-results').forEach((box) => box.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-key]');
+    if (!b) return;
+    B.state.q = ''; dash.draw('search-results');
+    B.pick(b.dataset.key);
+    B.popMap(b.dataset.key);
+    document.querySelectorAll('#result').forEach((m) => setTimeout(() => m.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50));
+  }));
+  const LAT0 = Math.cos(35.15 * Math.PI / 180);
+  const drawMini = (holder, it) => {
+    const shapes = B.parse('gu_shapes'), poi = B.parse('poi'), cpx = B.parse('complexes');
+    holder.replaceChildren();
+    if (!shapes || !poi || !cpx || !it) return;
+    if (it.lat == null) { const d = document.createElement('div'); d.className = 'bp-empty'; d.textContent = '이 단지는 위치 정보가 없어 미리보기를 그릴 수 없습니다. 이름을 누르면 Google 지도에서 이름으로 검색합니다.'; holder.appendChild(d); return; }
+    const W = Math.max(220, holder.clientWidth || 300), H = holder.clientHeight > 200 ? holder.clientHeight : 280;
+    const toXY = (lon, lat) => [lon * LAT0, lat];
+    const dLat = 0.007, dLon = 0.007 / LAT0 * (W / H);
+    const [x0, y0] = toXY(it.lon - dLon, it.lat - dLat), [x1, y1] = toXY(it.lon + dLon, it.lat + dLat);
+    const sc = Math.min(W / (x1 - x0), H / (y1 - y0));
+    const ox = (W - (x1 - x0) * sc) / 2, oy = (H - (y1 - y0) * sc) / 2;
+    const proj = ([x, y]) => [ox + (x - x0) * sc, oy + (y1 - y) * sc];
+    const pt = (o) => proj(toXY(o.lon, o.lat));
+    const inV = (o) => { const [a, b] = pt(o); return a > -8 && a < W + 8 && b > -8 && b < H + 8; };
+    const svg = d3.select(holder).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    svg.append('g').selectAll('path').data(shapes).join('path')
+      .attr('d', (sh) => sh.polys.map((poly) => poly.map((ring) => 'M' + ring.map(([lo, la]) => proj(toXY(lo, la)).map((v) => v.toFixed(1)).join(',')).join('L') + 'Z').join('')).join(''))
+      .attr('fill', 'var(--color-panel)').attr('stroke', 'var(--color-border-line)').attr('stroke-width', 1.5);
+    const apts = [...cpx.entries()].filter(([, l]) => inV(l));
+    svg.append('g').selectAll('circle').data(apts).join('circle').attr('cx', ([, l]) => pt(l)[0]).attr('cy', ([, l]) => pt(l)[1]).attr('r', 3)
+      .attr('fill', 'var(--cds-chart-muted)');
+    const near = poi.filter(inV);
+    svg.append('g').selectAll('path').data(near).join('path').attr('transform', (q) => `translate(${pt(q)})`)
+      .attr('d', (q) => (B.SCHOOL_NAME[q.kind] ? d3.symbol(d3.symbolTriangle, 40)() : q.kind === 'ktx' ? d3.symbol(d3.symbolStar, 110)() : d3.symbol(d3.symbolSquare, 40)()))
+      .attr('fill', (q) => (B.SCHOOL_NAME[q.kind] ? { elem: dash.colors[2], middle: dash.colors[3], high: dash.colors[4] }[q.kind] : B.LINE_COLORS[q.line] || 'var(--color-fg)'))
+      .attr('stroke', 'var(--color-panel)');
+    const [cx, cy] = pt(it);
+    const boxes = [[cx - it.name.length * 8, cy - 32, cx + it.name.length * 8, cy - 8]];
+    const lab = near.filter((q) => !(q.lat === it.lat && q.lon === it.lon)).filter((q) => {
+      const [a, b] = pt(q); const w = (q.name.length + (B.SCHOOL_NAME[q.kind] ? 0 : 1)) * 11 + 4;
+      if (a + 6 + w > W - 2 || a < 2 || b < 9 || b > H - 20) return false;
+      const bx = [a + 6, b - 8, a + 6 + w, b + 8];
+      if (boxes.some((o) => bx[0] < o[2] && bx[2] > o[0] && bx[1] < o[3] && bx[3] > o[1])) return false;
+      boxes.push(bx); return true;
+    });
+    svg.append('g').selectAll('text').data(lab).join('text').attr('x', (q) => pt(q)[0] + 6).attr('y', (q) => pt(q)[1]).attr('dy', '0.35em')
+      .attr('font-size', 11).attr('fill', 'var(--color-fg-muted)').style('paint-order', 'stroke').attr('stroke', 'var(--color-bg)').attr('stroke-width', 3)
+      .text((q) => q.name + (B.SCHOOL_NAME[q.kind] ? '' : '역'));
+    svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 9).attr('fill', 'var(--bp-up)').attr('fill-opacity', 0.25).attr('stroke', 'var(--bp-up)').attr('stroke-width', 2.5);
+    svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 3).attr('fill', 'var(--bp-up)');
+    svg.append('text').attr('x', cx).attr('y', cy - 16).attr('text-anchor', 'middle').attr('font-size', 'var(--cds-font-size-body)').attr('font-weight', 600).attr('fill', 'var(--color-fg)')
+      .style('paint-order', 'stroke').attr('stroke', 'var(--color-bg)').attr('stroke-width', 4).attr('stroke-linejoin', 'round').text(it.name);
+    const cap = document.createElement('div'); cap.className = 'cap'; cap.textContent = '주변 약 1.5km · 회색 점은 아파트 단지'; holder.appendChild(cap);
+  };
+  const searchItems = () => {
+    const cpx = B.parse('complexes'), poi = B.parse('poi');
+    if (!cpx || !poi) return null;
+    if (B.state.items && B.state.itemsSrc === cpx) return B.state.items;
+    const items = (cpx.all || [...cpx.keys()]).map((k) => { const l = cpx.get(k) || {}; const [gu, dong, apt] = k.split('|'); return { type: 'apt', key: k, name: apt, sub: `${gu} ${dong}`, tag: '아파트', lat: l.lat ?? null, lon: l.lon ?? null }; });
+    const seen = new Set();
+    poi.forEach((q) => {
+      const school = !!B.SCHOOL_NAME[q.kind];
+      const name = school ? q.name : q.name + '역';
+      const id = name + q.lat;
+      if (seen.has(id)) return; seen.add(id);
+      items.push({ type: school ? 'school' : 'station', name, sub: school ? q.gu : q.line, tag: school ? B.SCHOOL_NAME[q.kind] : q.kind === 'ktx' ? 'KTX' : '역', lat: q.lat, lon: q.lon });
+    });
+    B.state.items = items; B.state.itemsSrc = cpx;
+    return items;
+  };
+  dash.draw('search-results', (box) => {
+    const items = searchItems(); const q = norm(B.state.q);
+    if (!items || !q) { box.replaceChildren(); return; }
+    const hits = items.filter((it) => norm(it.name).includes(q) || norm(it.sub + it.name).includes(q))
+      .sort((a, b) => (norm(b.name) === q) - (norm(a.name) === q) || norm(b.name).startsWith(q) - norm(a.name).startsWith(q) || a.name.length - b.name.length).slice(0, 15);
+    const list = document.createElement('div'); list.className = 'bp-reslist';
+    const mini = document.createElement('div'); mini.className = 'bp-mini';
+    if (!hits.length) { const d = document.createElement('div'); d.className = 'bp-res'; const s2 = document.createElement('span'); s2.className = 'sm'; s2.textContent = '찾는 단지·학교·역이 없습니다'; d.append(s2); box.replaceChildren(d); return; }
+    const rows = hits.map((it) => {
+      const row = document.createElement('div'); row.className = 'bp-res'; row.tabIndex = -1;
+      const a = document.createElement('a'); a.className = 'bp-pop'; a.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(it.lat != null ? it.lat + ',' + it.lon : `부산 ${it.sub} ${it.name} 아파트`); a.target = '_blank'; a.rel = 'noopener'; a.title = 'Google 지도 팝업으로 열기';
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = it.name + ' ↗';
+      const tg = document.createElement('span'); tg.className = 'tag'; tg.textContent = it.tag;
+      const sm = document.createElement('span'); sm.className = 'sm'; sm.textContent = it.sub;
+      a.append(nm, tg, sm); row.append(a);
+      if (it.type === 'apt') { const b = document.createElement('button'); b.type = 'button'; b.dataset.key = it.key; b.textContent = '시세·입지'; row.append(b); }
+      const show = () => { rows.forEach((r) => r.classList.toggle('on', r === row)); drawMini(mini, it); };
+      row.addEventListener('pointerenter', show); a.addEventListener('focus', show);
+      return row;
+    });
+    list.append(...rows); box.replaceChildren(list, mini);
+    rows[0].classList.add('on');
+    requestAnimationFrame(() => drawMini(mini, hits[0]));
+  });
+  const named = document.getElementById(location.hash.slice(1));
+  if (named) setTimeout(() => named.scrollIntoView(), 0);
+
+  dash.draw('gu-select', (sel) => {
+    const rows = B.parse('trades');
+    const gus = rows ? [...new Set(rows.map((r) => r.gu))].sort((a, b) => a.localeCompare(b, 'ko')) : [];
+    sel.replaceChildren(new Option('부산 전체', ''), ...gus.map((g) => new Option(g, g)));
+    sel.value = B.P().gu || '';
+  });
+  dash.draw('dong-select', (sel) => {
+    const p = B.P(); const rows = B.parse('trades');
+    const dongs = rows && p.gu ? [...new Set(rows.filter((r) => r.gu === p.gu).map((r) => r.dong))].sort((a, b) => a.localeCompare(b, 'ko')) : [];
+    sel.replaceChildren(new Option(p.gu ? '전체 동' : '동 (구 먼저)', ''), ...dongs.map((d) => new Option(d, d)));
+    sel.disabled = !p.gu;
+    sel.value = p.dong || '';
+  });
+  dash.draw('map-title', (el) => { const a = B.P().apt; el.textContent = a ? `${a.split('|')[2]} 시세·입지 분석` : '입지 분석'; });
+  dash.draw('gmap-top', (el) => { const a = B.P().apt; if (!a) { el.replaceChildren(); return; } const l = document.createElement('a'); l.className = 'bp-gbtn'; l.href = B.gmapUrl(a); l.target = '_blank'; l.rel = 'noopener'; l.textContent = 'Google 지도 팝업 ↗'; el.replaceChildren(l); });
+  dash.draw('picked-name', (el) => { const a = B.P().apt; el.textContent = a ? a.split('|').slice(1).join(' ') : '—'; });
+  dash.draw('asof', (el) => { const e = B.P().end; el.textContent = e ? e.replaceAll('-', '. ') : '—'; });
+  dash.draw('month-label', (el) => { const e = B.P().end; el.textContent = e ? `${Number(e.slice(5, 7))}월` : '—'; });
+  dash.draw('selname', (el) => { const p = B.P(); el.textContent = p.dong || p.gu || '—'; });
+  dash.draw('areaname', (el) => { el.textContent = B.areaName(); });
+  dash.draw('rank-unit', (el) => { el.textContent = B.P().gu ? '동별 (거래 3건 이상)' : '구·군별'; });
+  dash.draw('conv-rate', (el) => { el.textContent = (B.CONV * 100).toFixed(1); });
+})();
+</script>
+
+<script>
+(() => {
+  // 상단 요약
+  const S = window.bp;
+  const metric = (m, a) => {
+    const p = S.P();
+    const gu = a === 'sel' ? p.gu : null, dong = a === 'sel' ? p.dong : null;
+    if (a === 'sel' && !gu) return null;
+    if (m === 'sale_idx' || m === 'jeonse_idx' || m === 'sale_avg' || m === 'jeonse_avg') {
+      const kind = m.startsWith('sale') ? 'sale' : 'jeonse';
+      const w = S.weekly(kind, gu, dong); if (!w) return null;
+      const isIdx = m.endsWith('idx');
+      const last = [...w].reverse().find((x) => (isIdx ? x.idx : x.mean));
+      if (!last) return { v: '—', c: null };
+      return isIdx ? { v: last.idx.toFixed(1), c: last.chg, u: '%' } : { v: S.eok(last.mean), c: last.mchg, u: '%' };
+    }
+    const mo = S.monthly(gu, dong); if (!mo) return null;
+    const cur = mo[mo.length - 1], prev = mo[mo.length - 2];
+    if (m === 'vol') return { v: S.fmt(cur.sale) + '건', c: prev && prev.sale ? (cur.sale / prev.sale - 1) * 100 : null, u: '%', d: 1 };
+    if (m === 'ratio') return { v: cur.ratio ? cur.ratio.toFixed(1) + '%' : '—', c: cur.ratio && prev && prev.ratio ? cur.ratio - prev.ratio : null, u: '%p', d: 1 };
+    return null;
+  };
+  dash.draw('m', (el) => { const r = metric(el.dataset.m, el.dataset.a); el.textContent = r ? r.v : '—'; });
+  dash.draw('mc', (el) => { const r = metric(el.dataset.m, el.dataset.a); el.textContent = r ? S.signed(r.c, r.d || 2, r.u) : '—'; S.updown(el, r ? r.c : 0); });
+})();
+</script>
+
+<script>
+(() => {
+  // 가격지수, 지역 상승률, 평균가격
+  const C = window.bp;
+  dash.draw('idx-chart', (el) => {
+    const kind = C.state.idxKind; const p = C.P();
+    if (C.status(kind === 'sale' ? 'trades' : 'rents') === 'error') { C.failed(el); return; }
+    const w = C.weekly(kind, p.gu, p.dong);
+    if (!w) { el.replaceChildren(); return; }
+    const pts = w.filter((x) => x.idx != null);
+    if (pts.length < 2) { C.empty(el, '이 지역은 거래가 적어 주간 지수를 계산할 수 없습니다.'); return; }
+    const H = 320, m = { t: 26, r: 46, b: 26, l: 44 };
+    const { W, svg } = C.svgBox(el, H);
+    const x = d3.scaleUtc([pts[0].t, d3.utcMonday.offset(pts[pts.length - 1].t, 1)], [m.l, W - m.r]);
+    const e = d3.extent(pts, (d) => d.idx); const pad = Math.max(1, (e[1] - e[0]) * 0.1);
+    const y = d3.scaleLinear([e[0] - pad, e[1] + pad], [H - m.b, m.t]).nice();
+    const cmax = d3.max(pts, (d) => Math.abs(d.chg || 0)) || 1;
+    const y2 = d3.scaleLinear([-cmax * 1.1, cmax * 1.1], [H - m.b, m.t]).nice();
+    C.caption(svg.append('text').attr('x', m.l - 4).attr('y', 12).attr('text-anchor', 'start')).text('(2026.01.12=100.0)');
+    C.caption(svg.append('text').attr('x', W - 4).attr('y', 12).attr('text-anchor', 'end')).text('(%)');
+    svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (t) => y(t)).attr('y2', (t) => y(t)).attr('stroke', 'var(--cds-chart-grid)');
+    C.caption(svg.append('g').selectAll('text').data(y.ticks(4)).join('text').attr('x', m.l - 6).attr('y', (t) => y(t)).attr('dy', '0.35em').attr('text-anchor', 'end')).text((t) => t.toFixed(0));
+    C.caption(svg.append('g').selectAll('text').data(y2.ticks(5)).join('text').attr('x', W - m.r + 6).attr('y', (t) => y2(t)).attr('dy', '0.35em')).text((t) => t.toFixed(1));
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y2(0)).attr('y2', y2(0)).attr('stroke', 'var(--cds-chart-axis)').attr('stroke-dasharray', '2 2');
+    svg.append('line').attr('x1', m.l).attr('x2', m.l).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-axis)');
+    svg.append('line').attr('x1', W - m.r).attr('x2', W - m.r).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-axis)');
+    const bw = Math.max(1, (x(d3.utcMonday.offset(pts[0].t, 1)) - x(pts[0].t)) * 0.75);
+    svg.append('g').selectAll('rect').data(pts.filter((d) => d.chg != null)).join('rect')
+      .attr('x', (d) => x(d.t)).attr('width', bw).attr('y', (d) => Math.min(y2(0), y2(d.chg))).attr('height', (d) => Math.max(0.5, Math.abs(y2(d.chg) - y2(0))))
+      .attr('fill', (d) => (d.chg >= 0 ? 'var(--bp-up)' : 'var(--bp-down)')).attr('fill-opacity', 0.55);
+    svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', 'var(--bp-up)').attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+      .attr('d', d3.line((d) => x(d.t) + bw / 2, (d) => y(d.idx)));
+    const span = (pts[pts.length - 1].t - pts[0].t) / 2.63e9;
+    const xt = x.ticks(d3.utcMonth.every(Math.max(1, Math.ceil(span / Math.max(2, Math.floor((W - m.l - m.r) / 80))))));
+    C.caption(svg.append('g').selectAll('text').data(xt).join('text').attr('x', (t) => x(t)).attr('y', H - 6).attr('text-anchor', 'middle')).text((t) => d3.utcFormat("'%y.%m.%d")(t));
+    const tip = C.addTip(el);
+    const hl = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-axis)').attr('visibility', 'hidden');
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const [px] = d3.pointer(ev);
+        const d = pts.reduce((a, b) => (Math.abs(x(b.t) + bw / 2 - px) < Math.abs(x(a.t) + bw / 2 - px) ? b : a), pts[0]);
+        hl.attr('x1', x(d.t) + bw / 2).attr('x2', x(d.t) + bw / 2).attr('visibility', 'visible');
+        C.tipLines(tip, d3.utcFormat('%Y-%m-%d 주')(d.t), ['지수 ' + d.idx.toFixed(1), '주간 변동 ' + C.signed(d.chg), '4주 거래 ' + C.fmt(d.n4) + '건']);
+        const s = el.clientWidth / W; C.placeTip(el, tip, (x(d.t) + bw / 2) * s, y(d.idx) * s);
+      })
+      .on('pointerleave', () => { tip.hidden = true; hl.attr('visibility', 'hidden'); });
+  });
+
+  dash.draw('rank-chart', (el) => {
+    const kind = C.state.rankKind; const p = C.P();
+    if (C.status(kind === 'sale' ? 'trades' : 'rents') === 'error') { C.failed(el); return; }
+    const rows = C.areaRows(kind, p.gu, null);
+    if (!rows) { el.replaceChildren(); return; }
+    const end = C.day(p.end || '2026-10-31');
+    const d1 = C.iso(d3.utcDay.offset(end, -27)), d0 = C.iso(d3.utcDay.offset(end, -55));
+    const by = p.gu ? 'dong' : 'gu'; const minN = p.gu ? 3 : 5;
+    let data = d3.rollups(rows.filter((r) => r.date >= d0), (v) => {
+      const cur = v.filter((r) => r.date >= d1), prev = v.filter((r) => r.date < d1);
+      if (cur.length < minN || prev.length < minN) return null;
+      const a = d3.median(cur, (r) => r.ppy), b = d3.median(prev, (r) => r.ppy);
+      return { chg: (a / b - 1) * 100, n: cur.length, ppy: a };
+    }, (r) => r[by]).filter(([, v]) => v).map(([name, v]) => ({ name, ...v }));
+    if (!data.length) { C.empty(el, '비교할 만큼 거래가 있는 지역이 없습니다.'); return; }
+    data.sort((a, b) => (C.state.rankOrder === 'desc' ? b.chg - a.chg : a.chg - b.chg));
+    data = data.slice(0, 10);
+    const rowH = 30, top = 4, H = data.length * rowH + top + 26;
+    const { W, svg } = C.svgBox(el, Math.max(H, 120));
+    const meas = svg.append('g').attr('font-size', 'var(--cds-font-size-caption)');
+    const left = (d3.max(data, (d) => { const t = meas.append('text').text(d.name); const w = t.node().getComputedTextLength(); t.remove(); return w; }) || 30) + 12;
+    meas.remove();
+    const lo = Math.min(0, d3.min(data, (d) => d.chg)), hi = Math.max(0, d3.max(data, (d) => d.chg));
+    const x = d3.scaleLinear([lo, hi], [left + (lo < 0 ? 52 : 0), W - 54]).nice();
+    const y = d3.scaleBand(data.map((d) => d.name), [top, top + data.length * rowH]).padding(0.3);
+    svg.append('g').selectAll('line').data(x.ticks(5)).join('line').attr('x1', (t) => x(t)).attr('x2', (t) => x(t)).attr('y1', top).attr('y2', top + data.length * rowH).attr('stroke', 'var(--cds-chart-grid)');
+    C.caption(svg.append('g').selectAll('text').data(x.ticks(5)).join('text').attr('x', (t) => x(t)).attr('y', top + data.length * rowH + 18).attr('text-anchor', 'middle')).text((t) => t.toFixed(1));
+    const g = svg.append('g').selectAll('g').data(data).join('g').style('cursor', 'pointer')
+      .on('click', (ev, d) => dash.setParams(by === 'gu' ? { gu: d.name, dong: null, apt: null } : { dong: d.name, apt: null }));
+    g.append('rect').attr('x', 0).attr('y', (d) => y(d.name) - 4).attr('width', W).attr('height', y.step()).attr('fill', 'transparent');
+    g.append('text').attr('x', left - 8).attr('y', (d) => y(d.name) + y.bandwidth() / 2).attr('dy', '0.35em').attr('text-anchor', 'end').attr('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg)').text((d) => d.name);
+    g.append('rect').attr('x', (d) => x(Math.min(0, d.chg))).attr('y', (d) => y(d.name)).attr('height', y.bandwidth()).attr('width', (d) => Math.max(1, Math.abs(x(d.chg) - x(0)))).attr('rx', 2)
+      .attr('fill', (d) => (d.chg >= 0 ? 'var(--bp-up)' : 'var(--bp-down)')).attr('fill-opacity', 0.75);
+    g.append('text').attr('x', (d) => x(d.chg) + (d.chg >= 0 ? 4 : -4)).attr('y', (d) => y(d.name) + y.bandwidth() / 2).attr('dy', '0.35em').attr('text-anchor', (d) => (d.chg >= 0 ? 'start' : 'end'))
+      .attr('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg)').style('font-variant-numeric', 'tabular-nums').text((d) => d.chg.toFixed(2));
+    const tip = C.addTip(el);
+    g.on('pointermove', (ev, d) => { C.tipLines(tip, d.name, ['최근 4주 평당가 ' + C.money(d.ppy), '변동률 ' + C.signed(d.chg), '최근 4주 거래 ' + d.n + '건']); const [px, py] = d3.pointer(ev, el); C.placeTip(el, tip, px, py); })
+      .on('pointerleave', () => { tip.hidden = true; });
+  });
+
+  dash.draw('avg-chart', (el) => {
+    const kind = C.state.avgKind; const p = C.P();
+    if (C.status(kind === 'sale' ? 'trades' : 'rents') === 'error') { C.failed(el); return; }
+    const all = C.weekly(kind, null, null);
+    const sel = p.gu ? C.weekly(kind, p.gu, p.dong) : null;
+    if (!all) { el.replaceChildren(); return; }
+    const series = [{ name: '부산', pts: all.filter((d) => d.mean), color: 'var(--cds-chart-muted)' }];
+    if (sel) series.push({ name: C.areaName(), pts: sel.filter((d) => d.mean), color: 'var(--bp-up)' });
+    const allPts = series.flatMap((s) => s.pts);
+    if (!allPts.length) { C.empty(el, '거래가 없습니다.'); return; }
+    const H = 320, m = { t: 14, r: 64, b: 26, l: 44 };
+    const { W, svg } = C.svgBox(el, H);
+    const x = d3.scaleUtc(d3.extent(allPts, (d) => d.t), [m.l, W - m.r]);
+    const y = d3.scaleLinear([d3.min(allPts, (d) => d.mean) * 0.9, d3.max(allPts, (d) => d.mean) * 1.05], [H - m.b, m.t]).nice();
+    svg.append('g').selectAll('line').data(y.ticks(5)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (t) => y(t)).attr('y2', (t) => y(t)).attr('stroke', 'var(--cds-chart-grid)');
+    C.caption(svg.append('g').selectAll('text').data(y.ticks(5)).join('text').attr('x', m.l - 6).attr('y', (t) => y(t)).attr('dy', '0.35em').attr('text-anchor', 'end')).text((t) => (t / 10000).toFixed(1));
+    C.caption(svg.append('g').selectAll('text').data(x.ticks(Math.max(2, Math.floor((W - m.l - m.r) / 90)))).join('text').attr('x', (t) => x(t)).attr('y', H - 6).attr('text-anchor', 'middle')).text((t) => d3.utcFormat("'%y.%m")(t));
+    const ends = [];
+    series.forEach((s) => {
+      svg.append('path').datum(s.pts).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line((d) => x(d.t), (d) => y(d.mean)));
+      const l = s.pts[s.pts.length - 1];
+      if (l) { svg.append('circle').attr('cx', x(l.t)).attr('cy', y(l.mean)).attr('r', 3.5).attr('fill', s.color); ends.push({ y: y(l.mean), x: x(l.t), text: C.eok(l.mean) }); }
+    });
+    ends.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i += 1) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+    ends.forEach((e) => svg.append('text').attr('x', e.x + 6).attr('y', e.y).attr('dy', '0.35em').attr('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg)').text(e.text));
+    const tip = C.addTip(el);
+    const hl = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-axis)').attr('visibility', 'hidden');
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const [px] = d3.pointer(ev); const t = x.invert(px);
+        const near = (pts) => pts.reduce((a, b) => (Math.abs(b.t - t) < Math.abs(a.t - t) ? b : a), pts[0]);
+        const d0 = near(series[0].pts);
+        hl.attr('x1', x(d0.t)).attr('x2', x(d0.t)).attr('visibility', 'visible');
+        C.tipLines(tip, d3.utcFormat('%Y-%m-%d 주')(d0.t), series.filter((s) => s.pts.length).map((s) => s.name + ' ' + C.eok(near(s.pts).mean)));
+        const s = el.clientWidth / W; C.placeTip(el, tip, x(d0.t) * s, y(d0.mean) * s);
+      })
+      .on('pointerleave', () => { tip.hidden = true; hl.attr('visibility', 'hidden'); });
+  });
+})();
+</script>
+
+<script>
+(() => {
+  // 상승 단지 표, 도넛, 월간 거래량, 전세가율
+  const D = window.bp;
+  dash.draw('rise-table', (el) => {
+    const kind = D.state.riseKind; const p = D.P();
+    if (D.status(kind === 'sale' ? 'trades' : 'rents') === 'error') { D.failed(el); return; }
+    const rows = D.areaRows(kind, p.gu, p.dong);
+    if (!rows) { el.replaceChildren(); return; }
+    const end = D.day(p.end || '2026-10-31');
+    const d1 = D.iso(d3.utcMonth.offset(end, -3)), d0 = D.iso(d3.utcMonth.offset(end, -6));
+    const data = d3.rollups(rows.filter((r) => r.date > d0), (v) => {
+      const cur = v.filter((r) => r.date > d1), prev = v.filter((r) => r.date <= d1);
+      if (cur.length < 2 || prev.length < 2) return null;
+      const a = d3.median(cur, (r) => r.ppy), b = d3.median(prev, (r) => r.ppy);
+      return { a, chg: (a / b - 1) * 100, r: v[0], n: cur.length };
+    }, (r) => D.key(r)).filter(([, v]) => v).map(([k, v]) => ({ k, ...v })).sort((a, b) => b.chg - a.chg).slice(0, 10);
+    if (!data.length) { D.empty(el, '비교할 만큼 거래가 있는 단지가 없습니다.'); return; }
+    const t = document.createElement('table'); t.className = 'bp-table';
+    const th = document.createElement('thead'); const hr = document.createElement('tr');
+    [['단지명', 'l'], ['3.3㎡당 시세', ''], ['변동률(%)', '']].forEach(([h, c]) => { const e = document.createElement('th'); e.textContent = h; if (c) e.className = c; hr.appendChild(e); });
+    th.appendChild(hr); t.appendChild(th);
+    const tb = document.createElement('tbody');
+    data.forEach((d) => {
+      const tr = document.createElement('tr'); tr.dataset.key = d.k; if (d.k === p.apt) tr.className = 'sel';
+      const a = document.createElement('td'); a.className = 'l';
+      const nm = document.createElement('div'); nm.textContent = d.r.apt;
+      const loc = document.createElement('div'); loc.className = 'sm'; loc.textContent = `${d.r.gu} ${d.r.dong} · 최근 3개월 ${d.n}건`;
+      a.append(nm, loc);
+      const b = document.createElement('td'); b.textContent = D.money(d.a);
+      const c = document.createElement('td'); c.textContent = D.signed(d.chg); D.updown(c, d.chg);
+      tr.append(a, b, c); tb.appendChild(tr);
+    });
+    t.appendChild(tb); el.replaceChildren(t);
+  });
+
+  const donut = (el, parts, center, sub, subVal) => {
+    const total = d3.sum(parts, (d) => d.v);
+    if (!total) { D.empty(el, '거래가 없습니다.'); return; }
+    const H = 300; const { W, svg } = D.svgBox(el, H);
+    const R = Math.max(60, Math.min(H / 2 - 30, W / 2 - 80)), r0 = R * 0.6;
+    const g = svg.append('g').attr('transform', `translate(${W / 2},${H / 2})`);
+    const arcs = d3.pie().sort(null).value((d) => d.v)(parts);
+    const arc = d3.arc().innerRadius(r0).outerRadius(R).padAngle(0.008);
+    const tip = D.addTip(el);
+    g.selectAll('path').data(arcs).join('path').attr('d', arc).attr('fill', (d) => d.data.color).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
+      .on('pointermove', (ev, d) => { D.tipLines(tip, d.data.name, [D.fmt(d.data.v) + '건', ((d.data.v / total) * 100).toFixed(1) + '%']); const [px, py] = d3.pointer(ev, el); D.placeTip(el, tip, px, py); })
+      .on('pointerleave', () => { tip.hidden = true; });
+    const outer = d3.arc().innerRadius(R + 12).outerRadius(R + 12);
+    const kept = [];
+    const lbs = arcs.filter((d) => d.data.v / total >= 0.03).filter((d) => {
+      const [cx, cy] = outer.centroid(d); const right = (d.startAngle + d.endAngle) / 2 <= Math.PI;
+      if (kept.some((k) => k.right === right && Math.abs(k.cy - cy) < 14)) return false;
+      kept.push({ cy, right }); return true;
+    });
+    g.selectAll('text.lb').data(lbs).join('text').attr('class', 'lb')
+      .attr('transform', (d) => `translate(${outer.centroid(d)})`).attr('text-anchor', (d) => ((d.startAngle + d.endAngle) / 2 > Math.PI ? 'end' : 'start')).attr('dy', '0.35em')
+      .attr('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg-muted)').style('font-variant-numeric', 'tabular-nums').text((d) => ((d.data.v / total) * 100).toFixed(1) + '%');
+    g.append('text').attr('text-anchor', 'middle').attr('y', -r0 * 0.42).attr('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg)').text(center[0]);
+    g.append('text').attr('text-anchor', 'middle').attr('y', 0).attr('dy', '0.35em').attr('font-family', 'var(--font-anthropic-serif)').attr('font-size', 'var(--cds-font-size-title)').attr('fill', 'var(--color-fg)').text(center[1]);
+    g.append('text').attr('text-anchor', 'middle').attr('y', r0 * 0.4).attr('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg-muted)').text(sub);
+    g.append('text').attr('text-anchor', 'middle').attr('y', r0 * 0.4 + 16).attr('font-size', 'var(--cds-font-size-caption)').style('font-variant-numeric', 'tabular-nums')
+      .attr('fill', subVal.v > 0 ? 'var(--bp-up)' : subVal.v < 0 ? 'var(--bp-down)' : 'var(--color-fg-muted)').text(subVal.text);
+  };
+  const arrow = (v, text) => (v > 0 ? '▲ ' : v < 0 ? '▼ ' : '') + text;
+
+  dash.draw('mix-donut', (el) => {
+    const p = D.P();
+    if (D.status('trades', 'rents') === 'error') { D.failed(el); return; }
+    const mo = D.monthly(p.gu, p.dong);
+    if (!mo) { el.replaceChildren(); return; }
+    const cur = mo[mo.length - 1], prev = mo[mo.length - 2];
+    const share = (m) => (m.jeonse + m.wolse ? (m.wolse / (m.jeonse + m.wolse)) * 100 : null);
+    const s = share(cur), ps = prev ? share(prev) : null;
+    const dv = s != null && ps != null ? s - ps : null;
+    donut(el, [{ name: '매매', v: cur.sale, color: dash.colors[0] }, { name: '전세', v: cur.jeonse, color: dash.colors[1] }, { name: '월세', v: cur.wolse, color: dash.colors[2] }],
+      ['임대차 중 월세 비중', s == null ? '—' : s.toFixed(1) + '%'], '전월 대비', { v: dv || 0, text: dv == null ? '—' : arrow(dv, D.signed(dv, 1, '%p')) });
+  });
+
+  const BANDS = [['2억 미만', 0, 20000], ['2–4억', 20000, 40000], ['4–6억', 40000, 60000], ['6–9억', 60000, 90000], ['9억 이상', 90000, Infinity]];
+  const bandColor = (i) => dash.colors[i + 1];
+  dash.draw('band-legend', (el) => {
+    el.replaceChildren(...BANDS.map(([n], i) => { const s = document.createElement('span'); const d = document.createElement('span'); d.className = 'bp-dot'; d.style.background = bandColor(i); s.append(d, n); return s; }));
+  });
+  dash.draw('band-donut', (el) => {
+    const p = D.P();
+    if (D.status('trades') === 'error') { D.failed(el); return; }
+    const mo = D.monthly(p.gu, p.dong);
+    if (!mo) { el.replaceChildren(); return; }
+    const cur = mo[mo.length - 1], prev = mo[mo.length - 2];
+    const med = cur.saleRows.length ? d3.median(cur.saleRows, (r) => r.amt) : null;
+    const pmed = prev && prev.saleRows.length ? d3.median(prev.saleRows, (r) => r.amt) : null;
+    const chg = med && pmed ? (med / pmed - 1) * 100 : null;
+    donut(el, BANDS.map(([n, a, b], i) => ({ name: n, v: cur.saleRows.filter((r) => r.amt >= a && r.amt < b).length, color: bandColor(i) })),
+      ['중위 매매가', med ? D.eok(med) : '—'], '전월 대비', { v: chg || 0, text: chg == null ? '—' : arrow(chg, D.signed(chg, 1)) });
+  });
+
+  dash.draw('vol-chart', (el) => {
+    const p = D.P();
+    if (D.status('trades', 'rents') === 'error') { D.failed(el); return; }
+    const mo = D.monthly(p.gu, p.dong);
+    if (!mo) { el.replaceChildren(); return; }
+    const keys = [['sale', '매매', dash.colors[0]], ['jeonse', '전세', dash.colors[1]], ['wolse', '월세', dash.colors[2]]];
+    const st = d3.stack().keys(keys.map((k) => k[0]))(mo);
+    const H = 320, m = { t: 14, r: 12, b: 26, l: 44 };
+    const { W, svg } = D.svgBox(el, H);
+    const x = d3.scaleBand(mo.map((d) => d.key), [m.l, W - m.r]).padding(0.3);
+    const y = d3.scaleLinear([0, d3.max(mo, (d) => d.sale + d.jeonse + d.wolse) * 1.08 || 1], [H - m.b, m.t]).nice();
+    svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (t) => y(t)).attr('y2', (t) => y(t)).attr('stroke', 'var(--cds-chart-grid)');
+    D.caption(svg.append('g').selectAll('text').data(y.ticks(4)).join('text').attr('x', m.l - 6).attr('y', (t) => y(t)).attr('dy', '0.35em').attr('text-anchor', 'end')).text((t) => d3.format(',')(t));
+    svg.append('g').selectAll('g').data(st).join('g').attr('fill', (s, i) => keys[i][2])
+      .selectAll('rect').data((s) => s).join('rect').attr('x', (d) => x(d.data.key)).attr('width', x.bandwidth()).attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])));
+    const every = Math.ceil(mo.length / Math.max(2, Math.floor((W - m.l - m.r) / 52)));
+    D.caption(svg.append('g').selectAll('text').data(mo.filter((d, i) => i % every === (mo.length - 1) % every)).join('text').attr('x', (d) => x(d.key) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle')).text((d) => d3.utcFormat("'%y.%-m")(d.t));
+    const tip = D.addTip(el);
+    svg.append('g').selectAll('rect').data(mo).join('rect').attr('x', (d) => x(d.key) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev, d) => { D.tipLines(tip, d3.utcFormat('%Y년 %-m월')(d.t), [...keys.map((k) => `${k[1]} ${D.fmt(d[k[0]])}건`), `합계 ${D.fmt(d.sale + d.jeonse + d.wolse)}건`]); const [px, py] = d3.pointer(ev, el); D.placeTip(el, tip, px, py); })
+      .on('pointerleave', () => { tip.hidden = true; });
+  });
+
+  dash.draw('ratio-chart', (el) => {
+    const p = D.P();
+    if (D.status('trades', 'rents') === 'error') { D.failed(el); return; }
+    const mo = D.monthly(p.gu, p.dong);
+    if (!mo) { el.replaceChildren(); return; }
+    const pts = mo.filter((d) => d.ratio != null);
+    const H = 320, m = { t: 14, r: 46, b: 26, l: 54 };
+    const { W, svg } = D.svgBox(el, H);
+    const x = d3.scaleBand(mo.map((d) => d.key), [m.l, W - m.r]).padding(0.35);
+    const yb = d3.scaleLinear([0, d3.max(mo, (d) => d.salePpy || 0) * 1.1 || 1], [H - m.b, m.t]).nice();
+    const yr = pts.length ? d3.scaleLinear([d3.min(pts, (d) => d.ratio) - 3, d3.max(pts, (d) => d.ratio) + 3], [H - m.b, m.t]).nice() : d3.scaleLinear([0, 100], [H - m.b, m.t]);
+    svg.append('g').selectAll('line').data(yb.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (t) => yb(t)).attr('y2', (t) => yb(t)).attr('stroke', 'var(--cds-chart-grid)');
+    D.caption(svg.append('g').selectAll('text').data(yb.ticks(4)).join('text').attr('x', m.l - 6).attr('y', (t) => yb(t)).attr('dy', '0.35em').attr('text-anchor', 'end')).text((t) => D.fmt(t) + '만');
+    D.caption(svg.append('g').selectAll('text').data(yr.ticks(4)).join('text').attr('x', W - m.r + 6).attr('y', (t) => yr(t)).attr('dy', '0.35em')).text((t) => t + '%');
+    svg.append('g').selectAll('rect').data(mo.filter((d) => d.salePpy)).join('rect').attr('x', (d) => x(d.key)).attr('width', x.bandwidth()).attr('y', (d) => yb(d.salePpy)).attr('height', (d) => H - m.b - yb(d.salePpy)).attr('rx', 2).attr('fill', 'var(--cds-chart-muted)');
+    if (pts.length) {
+      svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', 'var(--bp-up)').attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('d', d3.line((d) => x(d.key) + x.bandwidth() / 2, (d) => yr(d.ratio)));
+      svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', (d) => x(d.key) + x.bandwidth() / 2).attr('cy', (d) => yr(d.ratio)).attr('r', 3).attr('fill', 'var(--bp-up)');
+    }
+    const every = Math.ceil(mo.length / Math.max(2, Math.floor((W - m.l - m.r) / 52)));
+    D.caption(svg.append('g').selectAll('text').data(mo.filter((d, i) => i % every === (mo.length - 1) % every)).join('text').attr('x', (d) => x(d.key) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle')).text((d) => d3.utcFormat("'%y.%-m")(d.t));
+    const tip = D.addTip(el);
+    svg.append('g').selectAll('rect.h').data(mo).join('rect').attr('class', 'h').attr('x', (d) => x(d.key) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev, d) => { D.tipLines(tip, d3.utcFormat('%Y년 %-m월')(d.t), ['매매 평당가 ' + D.money(d.salePpy), '전세가율 ' + (d.ratio ? d.ratio.toFixed(1) + '% (3개월)' : '—')]); const [px, py] = d3.pointer(ev, el); D.placeTip(el, tip, px, py); })
+      .on('pointerleave', () => { tip.hidden = true; });
+  });
+})();
+</script>
+
+<script>
+(() => {
+  // 지도
+  const M = window.bp;
+  const LAT0 = Math.cos(35.15 * Math.PI / 180);
+  const toXY = (lon, lat) => [lon * LAT0, lat];
+  const gm = (text, q) => { const a = document.createElement('a'); a.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q); a.target = '_blank'; a.rel = 'noopener'; a.className = 'bp-glink'; a.textContent = text; return a; };
+  M.gm = gm;
+})();
+</script>
+
+<script>
+(() => {
+  // 입지 분석
+  const L = window.bp;
+  const at = (q) => q.lat + ',' + q.lon;
+  const gmL = (t, q) => L.gm(t, q);
+  const factBox = (v, c) => { const d = document.createElement('div'); d.className = 'fact'; const a = document.createElement('div'); a.className = 'v'; a.textContent = v; const b = document.createElement('div'); b.className = 'c'; b.textContent = c; d.append(a, b); return d; };
+  const table = (heads, rows, leftCols = 1) => {
+    const t = document.createElement('table'); t.className = 'bp-table';
+    const th = document.createElement('thead'); const tr = document.createElement('tr');
+    heads.forEach((h, i) => { const c = document.createElement('th'); c.textContent = h; if (i < leftCols) c.className = 'l'; tr.appendChild(c); });
+    th.appendChild(tr); t.appendChild(th);
+    const tb = document.createElement('tbody');
+    rows.forEach((r) => { const row = document.createElement('tr'); r.forEach((v, i) => { const c = document.createElement('td'); if (i < leftCols) c.className = 'l'; if (v instanceof Node) c.appendChild(v); else c.textContent = v; row.appendChild(c); }); tb.appendChild(row); });
+    t.appendChild(tb);
+    const w = document.createElement('div'); w.className = 'bp-tablewrap'; w.appendChild(t); return w;
+  };
+  const pill = (text, cls) => { const s = document.createElement('span'); s.className = 'bp-pill ' + (cls || ''); s.textContent = text; return s; };
+  const h3 = (t) => { const h = document.createElement('h3'); h.textContent = t; return h; };
+  const facts = (...f) => { const d = document.createElement('div'); d.className = 'facts'; d.append(...f); return d; };
+  const centroidOf = (shape) => { const pts = shape.polys.flatMap((p) => p[0]); return { lon: d3.mean(pts, (q) => q[0]), lat: d3.mean(pts, (q) => q[1]) }; };
+  dash.draw('loc', (el) => {
+    const p = L.P();
+    if (L.status('poi', 'complexes', 'gu_shapes') === 'error') { L.failed(el); return; }
+    const poi = L.parse('poi'), cpx = L.parse('complexes'), shapes = L.parse('gu_shapes');
+    if (!poi || !cpx || !shapes) { el.replaceChildren(); return; }
+    const tab = L.state.loc;
+    if (tab === 'gtx') { el.replaceChildren(); return; }
+    const out = [];
+    const sel = p.apt ? cpx.get(p.apt) : null;
+    if (p.apt && sel) {
+      const [, dong, apt] = p.apt.split('|');
+      out.push(h3(`${apt} · ${p.gu} ${dong}`));
+      { const d = document.createElement('p'); d.className = 'bp-gmap'; d.append(gmL('Google 지도에서 이 단지 보기', at(sel))); out.push(d); }
+      const near = (kinds) => poi.filter((q) => kinds.includes(q.kind)).map((q) => ({ ...q, d: L.hav(sel, q) })).sort((a, b) => a.d - b.d);
+      if (tab === 'school') {
+        const best = ['elem', 'middle', 'high'].map((k) => near([k])[0]).filter(Boolean);
+        const within = near(['elem', 'middle', 'high']).filter((q) => q.d <= 1000);
+        const e = best.find((q) => q.kind === 'elem');
+        out.push(facts(...best.map((q) => factBox(L.dist(q.d), '가장 가까운 ' + L.SCHOOL_NAME[q.kind])), factBox(within.length + '곳', '반경 1km 학교')));
+        if (e) out.push(pill(e.d <= 400 ? '초품아 수준 (초등학교 400m 이내)' : e.d <= 800 ? '초등학교 도보권 (800m 이내)' : '초등학교까지 800m 넘음', e.d <= 400 ? 'good' : e.d <= 800 ? 'mid' : ''));
+        out.push(table(['학교', '구분', '거리', '도보'], near(['elem', 'middle', 'high']).slice(0, 12).map((q) => [gmL(q.name, at(q)), L.SCHOOL_NAME[q.kind], L.dist(q.d), L.walk(q.d)])));
+      } else if (tab === 'subway') {
+        const s = near(['subway', 'rail']);
+        const n5 = s.filter((q) => q.d <= 500).length, n10 = s.filter((q) => q.d <= 1000).length;
+        out.push(facts(factBox(s[0] ? L.dist(s[0].d) : '—', '가장 가까운 역' + (s[0] ? ` (${s[0].name})` : '')), factBox(n5 + '곳', '반경 500m 역'), factBox(n10 + '곳', '반경 1km 역')));
+        if (s[0]) out.push(pill(s[0].d <= 500 ? '역세권 (500m 이내)' : s[0].d <= 1000 ? '준역세권 (1km 이내)' : '역에서 1km 넘음', s[0].d <= 500 ? 'good' : s[0].d <= 1000 ? 'mid' : ''));
+        out.push(table(['역', '노선', '거리', '도보'], s.slice(0, 10).map((q) => [gmL(q.name + '역', at(q)), q.line, L.dist(q.d), L.walk(q.d)])));
+      } else if (tab === 'rail') {
+        const k = near(['ktx']); const r = near(['rail']);
+        out.push(facts(...k.map((q) => factBox(L.dist(q.d), `${q.name}역 (${q.line})`)), ...(r[0] ? [factBox(L.dist(r[0].d), `가장 가까운 ${r[0].line}역 (${r[0].name})`)] : [])));
+        out.push(table(['역', '노선', '거리'], [...k, ...r.slice(0, 6)].map((q) => [gmL(q.name + '역', at(q)), q.line, L.dist(q.d)])));
+      }
+    } else if (p.gu) {
+      const shape = shapes.find((s) => s.gu === p.gu);
+      out.push(h3(p.apt ? `${p.apt.split('|')[2]}의 위치를 찾지 못해 ${p.gu} 기준으로 보여줍니다` : `${p.gu} 기준`));
+      const inGu = poi.filter((q) => q.gu === p.gu);
+      if (tab === 'school') {
+        const c = (k) => inGu.filter((q) => q.kind === k).length;
+        out.push(facts(factBox(c('elem') + '곳', '초등학교'), factBox(c('middle') + '곳', '중학교'), factBox(c('high') + '곳', '고등학교')));
+        out.push(table(['학교', '구분'], inGu.filter((q) => L.SCHOOL_NAME[q.kind]).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name, 'ko')).map((q) => [gmL(q.name, at(q)), L.SCHOOL_NAME[q.kind]])));
+      } else if (tab === 'subway') {
+        const s = inGu.filter((q) => q.kind === 'subway' || q.kind === 'rail');
+        const byLine = d3.rollups(s, (v) => v.map((q) => q.name).join(', '), (q) => q.line);
+        out.push(facts(factBox(s.length + '곳', '구 안의 역'), factBox(byLine.length + '개', '지나는 노선')));
+        out.push(table(['노선', '역'], byLine.map(([l, n]) => [l, n]), 2));
+      } else if (tab === 'rail') {
+        const c = shape ? centroidOf(shape) : null;
+        const k = poi.filter((q) => q.kind === 'ktx').map((q) => ({ ...q, d: c ? L.hav(c, q) : NaN })).sort((a, b) => a.d - b.d);
+        const r = inGu.filter((q) => q.kind === 'rail');
+        out.push(facts(...k.map((q) => factBox(L.dist(q.d), `${q.name}역까지 (구 중심에서)`)), factBox(r.length + '곳', '구 안의 동해선·부전마산선 역')));
+        if (r.length) out.push(table(['역', '노선'], r.map((q) => [gmL(q.name + '역', at(q)), q.line])));
+      }
+    } else {
+      out.push(h3('구별 입지 비교'));
+      const gus = shapes.map((s) => s.gu).sort((a, b) => a.localeCompare(b, 'ko'));
+      const cnt = (gu, kinds) => poi.filter((q) => q.gu === gu && kinds.includes(q.kind)).length;
+      if (tab === 'school') out.push(table(['구·군', '초', '중', '고', '합계'], gus.map((g) => [g, cnt(g, ['elem']), cnt(g, ['middle']), cnt(g, ['high']), cnt(g, ['elem', 'middle', 'high'])]).sort((a, b) => b[4] - a[4])));
+      else if (tab === 'subway') out.push(table(['구·군', '도시철도 역', '동해선·부전마산선 역', '합계'], gus.map((g) => [g, cnt(g, ['subway']), cnt(g, ['rail']), cnt(g, ['subway', 'rail'])]).sort((a, b) => b[3] - a[3])));
+      else if (tab === 'rail') { const k = poi.filter((q) => q.kind === 'ktx'); out.push(table(['구·군', ...k.map((q) => q.name + '역까지')], gus.map((g) => { const c = centroidOf(shapes.find((s) => s.gu === g)); return [g, ...k.map((q) => L.dist(L.hav(c, q)))]; }))); }
+    }
+    el.replaceChildren(...out);
+  });
+})();
+</script>
+
+<script>
+(() => {
+  // 단지 TOP 10, 지역별, 최근 거래, 부동산원 지수
+  const R = window.bp;
+  const mkTable = (heads, rows, opts = {}) => {
+    const t = document.createElement('table'); t.className = 'bp-table';
+    const thead = document.createElement('thead'); const tr = document.createElement('tr');
+    heads.forEach(([h, cls]) => { const c = document.createElement('th'); c.textContent = h; if (cls) c.className = cls; tr.appendChild(c); });
+    thead.appendChild(tr); t.appendChild(thead);
+    const tb = document.createElement('tbody');
+    rows.forEach(({ key, cells }) => { const row = document.createElement('tr'); row.dataset.key = key; if (key === opts.sel) row.className = 'sel'; cells.forEach((v, i) => { const c = document.createElement('td'); c.textContent = v; if (heads[i][1]) c.className = heads[i][1]; row.appendChild(c); }); tb.appendChild(row); });
+    t.appendChild(tb); return t;
+  };
+  dash.draw('top10', (el) => {
+    const p = R.P();
+    if (R.status(R.srcId(p.type)) === 'error') { R.failed(el); return; }
+    const rows = R.rowsFor({ apt: null });
+    if (!rows) { el.replaceChildren(); return; }
+    if (!rows.length) { R.empty(el, '조건에 맞는 거래가 없습니다.'); return; }
+    const tab = R.state.top;
+    const amtHead = p.type === 'sale' ? '거래가' : p.type === 'jeonse' ? '보증금' : '월세 / 보증금';
+    const amtText = (r) => (p.type === 'wolse' ? `${R.fmt(r.rent)}만 / ${R.money(r.amt)}` : R.money(r.amt));
+    let t;
+    if (tab === 'price') {
+      const top = [...rows].sort((a, b) => (p.type === 'wolse' ? b.rent - a.rent || b.amt - a.amt : b.amt - a.amt)).slice(0, 10);
+      t = mkTable([['순위', 'bp-rank l'], ['단지', 'l'], ['위치', 'l hide-narrow'], ['전용', ''], ['층', 'hide-narrow'], [amtHead, ''], ['계약일', 'hide-narrow']],
+        top.map((r, i) => ({ key: R.key(r), cells: [i + 1, r.apt, r.gu + ' ' + r.dong, r.area + '㎡', r.floor + '층', amtText(r), r.date] })), { sel: p.apt });
+    } else {
+      const byApt = d3.rollups(rows, (v) => ({ n: v.length, med: d3.median(v, (r) => r.ppy), amt: d3.median(v, (r) => (p.type === 'wolse' ? r.rent : r.amt)), r: v[0] }), (r) => R.key(r)).map(([k, v]) => ({ k, ...v }));
+      const top = tab === 'ppy' ? byApt.filter((a) => a.n >= 3).sort((a, b) => b.med - a.med).slice(0, 10) : byApt.sort((a, b) => b.n - a.n || b.med - a.med).slice(0, 10);
+      t = mkTable([['순위', 'bp-rank l'], ['단지', 'l'], ['위치', 'l hide-narrow'], ['평당가 중앙값', ''], [p.type === 'wolse' ? '월세 중앙값' : '거래가 중앙값', 'hide-narrow'], ['거래', '']],
+        top.map((a, i) => ({ key: a.k, cells: [i + 1, a.r.apt, a.r.gu + ' ' + a.r.dong, R.money(a.med), p.type === 'wolse' ? R.fmt(Math.round(a.amt)) + '만' : R.money(a.amt), a.n + '건'] })), { sel: p.apt });
+    }
+    el.replaceChildren(t);
+  });
+  dash.draw('recent', (el) => {
+    const p = R.P();
+    if (R.status(R.srcId(p.type)) === 'error') { R.failed(el); return; }
+    const rows = R.rowsFor();
+    if (!rows) { el.replaceChildren(); return; }
+    if (!rows.length) { R.empty(el, '조건에 맞는 거래가 없습니다.'); return; }
+    const top = [...rows].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 200);
+    const heads = [['계약일', 'l'], ['단지', 'l'], ['위치', 'l hide-narrow'], ['전용', ''], ['층', 'hide-narrow'], [p.type === 'sale' ? '거래가' : '보증금', '']];
+    if (p.type === 'wolse') heads.push(['월세', '']);
+    heads.push(['평당가', 'hide-narrow']);
+    el.replaceChildren(mkTable(heads, top.map((r) => { const cells = [r.date, r.apt, r.gu + ' ' + r.dong, r.area + '㎡', r.floor + '층', R.money(r.amt)]; if (p.type === 'wolse') cells.push(R.fmt(r.rent) + '만'); cells.push(R.money(r.ppy)); return { key: R.key(r), cells }; }), { sel: p.apt }));
+  });
+  dash.draw('areas', (el) => {
+    const p = R.P();
+    if (R.status(R.srcId(p.type)) === 'error') { R.failed(el); return; }
+    const rows = R.rowsFor({ dong: null, apt: null });
+    if (!rows) { el.replaceChildren(); return; }
+    if (!rows.length) { R.empty(el, '조건에 맞는 거래가 없습니다.'); return; }
+    const by = p.gu ? 'dong' : 'gu';
+    let data = d3.rollups(rows, (v) => ({ n: v.length, med: d3.median(v, (r) => r.ppy) }), (r) => r[by]).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.med - a.med);
+    if (by === 'dong') data = data.filter((d) => d.n >= 3).slice(0, 20);
+    const rowH = 24, top = 4, H = data.length * rowH + top + 8;
+    el.style.minHeight = Math.max(320, H) + 'px';
+    const { W, svg } = R.svgBox(el, H);
+    const meas = svg.append('g').attr('font-size', 'var(--cds-font-size-caption)');
+    const widest = (arr) => d3.max(arr, (s) => { const t = meas.append('text').text(s); const w = t.node().getComputedTextLength(); t.remove(); return w; }) || 0;
+    const left = widest(data.map((d) => d.name)) + 10;
+    const right = widest(data.map((d) => R.money(d.med) + ' · ' + R.fmt(d.n) + '건')) + 12;
+    meas.remove();
+    const x = d3.scaleLinear([0, d3.max(data, (d) => d.med)], [left, W - right]);
+    const y = d3.scaleBand(data.map((d) => d.name), [top, top + data.length * rowH]).padding(0.3);
+    const sel = by === 'dong' ? p.dong : p.gu;
+    const gg = svg.append('g').selectAll('g').data(data).join('g').style('cursor', 'pointer')
+      .on('click', (ev, d) => dash.setParams(by === 'gu' ? { gu: d.name, dong: null, apt: null } : { dong: d.name === p.dong ? null : d.name, apt: null }));
+    gg.append('rect').attr('x', 0).attr('y', (d) => y(d.name) - 3).attr('width', W).attr('height', y.step()).attr('fill', 'transparent');
+    gg.append('text').attr('x', left - 8).attr('y', (d) => y(d.name) + y.bandwidth() / 2).attr('dy', '0.35em').attr('text-anchor', 'end').attr('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg)').text((d) => d.name);
+    gg.append('rect').attr('x', left).attr('y', (d) => y(d.name)).attr('height', y.bandwidth()).attr('width', (d) => Math.max(1, x(d.med) - left)).attr('rx', 3).attr('fill', (d, i) => (d.name === sel || (!sel && i === 0) ? dash.colors[0] : 'var(--cds-chart-muted)'));
+    gg.append('text').attr('x', (d) => x(d.med) + 6).attr('y', (d) => y(d.name) + y.bandwidth() / 2).attr('dy', '0.35em').attr('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg-muted)').style('font-variant-numeric', 'tabular-nums').text((d) => R.money(d.med) + ' · ' + R.fmt(d.n) + '건');
+  });
+  dash.draw('reb', (el) => {
+    const d = dash.data('price_index');
+    if (d.status === 'error') { R.failed(el); return; }
+    if (d.status !== 'ok') { el.replaceChildren(); return; }
+    const parse = d3.utcParse('%Y-%m');
+    const rows = d.data.map((r) => ({ t: parse(r.month), v: Number(r.index), c: r.mom_change_pct === '' || r.mom_change_pct == null ? null : Number(r.mom_change_pct) })).sort((a, b) => a.t - b.t);
+    const H = 300, m = { t: 14, r: 44, b: 26, l: 44 };
+    const { W, svg } = R.svgBox(el, H);
+    const y = d3.scaleLinear([Math.min(99.8, d3.min(rows, (r) => r.v) - 0.1), Math.max(100.3, d3.max(rows, (r) => r.v) + 0.1)], [H - m.b, m.t]);
+    const x = d3.scaleUtc(d3.extent(rows, (r) => r.t), [m.l, W - m.r]);
+    svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (t) => y(t)).attr('y2', (t) => y(t)).attr('stroke', 'var(--cds-chart-grid)');
+    R.caption(svg.append('g').selectAll('text').data(y.ticks(4)).join('text').attr('x', m.l - 6).attr('y', (t) => y(t)).attr('dy', '0.35em').attr('text-anchor', 'end')).text((t) => t.toFixed(1));
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(100)).attr('y2', y(100)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+    R.caption(svg.append('g').selectAll('text').data(rows).join('text').attr('x', (r) => x(r.t)).attr('y', H - 6).attr('text-anchor', 'middle')).text((r) => d3.utcFormat('%-m월')(r.t));
+    svg.append('path').datum(rows).attr('fill', 'none').attr('stroke', dash.colors[1]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line((r) => x(r.t), (r) => y(r.v)));
+    svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', (r) => x(r.t)).attr('cy', (r) => y(r.v)).attr('r', 3).attr('fill', dash.colors[1]);
+    const last = rows[rows.length - 1];
+    svg.append('text').attr('x', x(last.t) + 8).attr('y', y(last.v)).attr('dy', '0.35em').attr('fill', 'var(--color-fg)').attr('font-size', 'var(--cds-font-size-caption)').text(last.v.toFixed(1));
+    const tip = R.addTip(el);
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => { const [px] = d3.pointer(ev); const r = rows.reduce((a, b) => (Math.abs(x(b.t) - px) < Math.abs(x(a.t) - px) ? b : a), rows[0]); R.tipLines(tip, d3.utcFormat('%Y년 %-m월')(r.t), ['지수 ' + r.v.toFixed(1), r.c == null ? '전월 대비 —' : '전월 대비 ' + (r.c > 0 ? '+' : '') + r.c.toFixed(2) + '%']); const s = el.clientWidth / W; R.placeTip(el, tip, x(r.t) * s, y(r.v) * s); })
+      .on('pointerleave', () => { tip.hidden = true; });
+  });
+})();
+</script>
+
+<script>
+(() => {
+  // 고른 단지의 시세 요약
+  const A = window.bp;
+  dash.draw('apt-summary', (el) => {
+    const p = A.P();
+    if (!p.apt) { el.replaceChildren(); return; }
+    const t = A.parse('trades'), r = A.parse('rents');
+    if (!t || !r) { el.replaceChildren(); return; }
+    const mine = (rows) => rows.filter((x) => A.key(x) === p.apt && (!p.end || x.date <= p.end)).sort((a, b) => b.date.localeCompare(a.date));
+    const sale = mine(t), rent = mine(r);
+    const jeon = rent.filter((x) => x.kind === 'jeonse'), wol = rent.filter((x) => x.kind === 'wolse');
+    const box = (v, c) => { const d = document.createElement('div'); d.className = 'fact'; const a = document.createElement('div'); a.className = 'v'; a.textContent = v; const b = document.createElement('div'); b.className = 'c'; b.textContent = c; d.append(a, b); return d; };
+    const sp = sale.length ? d3.median(sale, (x) => x.ppy) : null, jp = jeon.length ? d3.median(jeon, (x) => x.ppy) : null;
+    const facts = document.createElement('div'); facts.className = 'facts';
+    facts.append(
+      box(sale[0] ? A.money(sale[0].amt) : '—', sale[0] ? `최근 매매 · ${sale[0].area}㎡ ${sale[0].floor}층 · ${sale[0].date}` : '매매 거래 없음'),
+      box(jeon[0] ? A.money(jeon[0].amt) : '—', jeon[0] ? `최근 전세 · ${jeon[0].area}㎡ · ${jeon[0].date}` : '전세 거래 없음'),
+      box(sp ? A.money(sp) : '—', '매매 평당가 중앙값'),
+      box(sp && jp ? ((jp / sp) * 100).toFixed(1) + '%' : '—', '전세가율 (평당가 기준)'),
+      box(`${sale.length} / ${jeon.length} / ${wol.length}`, '거래 건수 매매·전세·월세 (2025년~)'),
+    );
+    const h = document.createElement('h3'); h.textContent = '최근 거래';
+    const all = [...sale.map((x) => ({ ...x, t: '매매' })), ...jeon.map((x) => ({ ...x, t: '전세' })), ...wol.map((x) => ({ ...x, t: '월세' }))].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+    const tbl = document.createElement('table'); tbl.className = 'bp-table';
+    const th = document.createElement('tr');
+    [['계약일', 'l'], ['유형', 'l'], ['전용', ''], ['층', ''], ['금액', '']].forEach(([n, c]) => { const e = document.createElement('th'); e.textContent = n; if (c) e.className = c; th.appendChild(e); });
+    const thead = document.createElement('thead'); thead.appendChild(th); tbl.appendChild(thead);
+    const tb = document.createElement('tbody');
+    all.forEach((x) => {
+      const tr = document.createElement('tr');
+      [[x.date, 'l'], [x.t, 'l'], [x.area + '㎡', ''], [x.floor + '층', ''], [x.t === '월세' ? `${A.money(x.amt)} / ${A.fmt(x.rent)}만` : A.money(x.amt), '']].forEach(([v, c]) => { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.appendChild(td); });
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb);
+    const wrap = document.createElement('div'); wrap.className = 'bp-tablewrap'; wrap.style.maxHeight = '16rem'; wrap.appendChild(tbl);
+    const h2 = document.createElement('h3'); h2.textContent = '입지'; h2.style.marginTop = 'var(--cds-gap-md)';
+    el.replaceChildren(facts, h, all.length ? wrap : document.createTextNode('거래 없음'), h2);
+  });
+})();
+</script>
+
+</div>
+</body>
+</html>
